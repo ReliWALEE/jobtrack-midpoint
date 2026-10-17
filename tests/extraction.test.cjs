@@ -1,0 +1,8 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');const {extractJob}=require('../extension/extract.js');const fs=require('node:fs');
+const doc=values=>({querySelectorAll:()=>values.map(v=>({textContent:typeof v==='string'?v:JSON.stringify(v)}))});
+const job={'@type':'JobPosting',title:'Developer',hiringOrganization:{name:'Acme'},employmentType:'FULL_TIME',baseSalary:{currency:'USD',value:{value:80000,unitText:'YEAR'}}};
+test('actual fixture extracts supported fields',()=>{const html=fs.readFileSync(__dirname+'/../web/demo-job.html','utf8');const value=html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1];const r=extractJob(doc([value]),'http://localhost/demo-job.html');assert.equal(r.company,'Northstar Labs');assert.equal(r.salary,65000);assert.equal(r.employment_type,'Internship');});
+test('graph, arrays, malformed data tolerated',()=>{assert.equal(extractJob(doc(['bad',{'@graph':[job]}]),'https://example.com').title,'Developer');assert.equal(extractJob(doc([[job]]),'https://example.com').company,'Acme');});
+test('hourly and foreign currency salary require manual entry',()=>{for(const baseSalary of [{currency:'USD',value:{value:40,unitText:'HOUR'}},{currency:'EUR',value:{value:90000,unitText:'YEAR'}},{currency:'USD',value:{value:null,unitText:'YEAR'}}])assert.equal(extractJob(doc([{...job,baseSalary}]),'https://example.com').salary,null);});
+test('unsupported page provides actionable error',()=>assert.throws(()=>extractJob(doc([]),'https://example.com'),/bundled demo/));
+test('missing optional fields do not fabricate salary',()=>{const r=extractJob(doc([{'@type':['JobPosting'],title:'Role'}]),'https://example.com');assert.equal(r.salary,null);assert.equal(r.company,'');});

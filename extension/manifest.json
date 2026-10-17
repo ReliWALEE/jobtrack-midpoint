@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "JobTrack Capture",
+  "version": "1.0.0",
+  "description": "Review a Schema.org job posting and open it as a JobTrack draft.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
