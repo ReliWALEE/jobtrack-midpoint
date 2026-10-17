@@ -52,6 +52,7 @@ class API(unittest.TestCase):
  def test_invalid_json_and_media(self):
   self.assertEqual(self.call('POST',data={'company':'X','title':'Y'},headers={'Content-Type':'text/plain'})[0],415)
   self.assertEqual(self.call('POST',data=[])[0],400)
- def test_health(self):
+ def test_health_and_static(self):
   self.assertEqual(self.call(path='/api/health')[1]['database'],'sqlite')
+  with urlopen(self.base+'/') as r:self.assertIn(b'Your search, in focus',r.read())
 if __name__=='__main__':unittest.main()
