@@ -1,6 +1,8 @@
 # AWS deployment preparation
 
-Status as of November 6, 2026: configuration prepared and checked locally. No AWS deployment, AWS service-side template validation, bootstrap execution, cloud health check, or public URL has been verified. AWS CLI and the Session Manager plugin are installed locally, but an authenticated Learner Lab session is still needed. This is a private single-user class demo, not a production service.
+Status as of November 6, 2026: configuration prepared and checked locally; AWS service-side template syntax validation passed in the course Sandbox. No JobTrack deployment, bootstrap execution, cloud health check, or public URL has been verified. AWS CLI and the Session Manager plugin are installed locally, but the intended Learner Lab account/profile remains unverified. This is a private single-user class demo, not a production service.
+
+**Account finding:** The accessible AWS Academy Cloud Architecting **Sandbox environment** was inspected using temporary credentials. It is not configured like the published Learner Lab: `LabInstanceProfile` is absent, and its existing instance profiles are `myS3Role` and `EMR_EC2_DefaultRole`. The template did pass AWS service-side `validate-template` there, but validation does not check whether the named profile exists. The user directed us **not to deploy in this Sandbox now**. No JobTrack bucket, stack, instance, or policy was created there. The template below targets a Learner Lab that actually has `LabInstanceProfile`; verify that before running it. The Sandbox would need a separately reviewed access design and template.
 
 ## Design
 

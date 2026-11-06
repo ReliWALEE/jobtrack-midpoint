@@ -12,7 +12,7 @@ Roles: NoorAldeen — project concept and [verified implementation contribution]
 
 ## Summary
 
-JobTrack gives students and job seekers one place to record opportunities, update application stages, and find entries by company, role, status, employment type, and salary. The implemented core is a browser dashboard, Python JSON API, and SQLite database. A Chrome extension can prefill a draft from a supported Schema.org JobPosting page for user review. The planned private cloud path uses Amazon EC2, encrypted EBS, S3, IAM, Systems Manager, and CloudFormation. **Replace this sentence with actual AWS deployment result and measured latency once verified.**
+JobTrack gives students and job seekers one place to record opportunities, update application stages, and find entries by company, role, status, employment type, and salary. The implemented core is a browser dashboard, Python JSON API, and SQLite database. A Chrome extension can prefill a draft from a supported Schema.org JobPosting page for user review. The planned private cloud path uses Amazon EC2, encrypted EBS, S3, IAM, Systems Manager, and CloudFormation. The built-in browser verified the extractor output through review, save, edit, refresh, and deletion; installed-extension toolbar use remains unverified. Local latency is recorded in `evidence/performance-local.json`; cloud latency is pending. **Replace the cloud-status sentence with actual deployment result and measured latency once verified.**
 
 ## Problem, users and use cases
 

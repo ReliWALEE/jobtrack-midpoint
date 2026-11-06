@@ -44,7 +44,7 @@ This app has no user accounts or per-user isolation. Keep local or use the priva
 
 Supported extraction is Schema.org JSON-LD JobPosting, including arrays and `@graph`. The bundled fictional Northstar Labs page is the reliable demonstration fixture. Arbitrary job boards, authenticated sites, iframes and Chrome internal pages are not guaranteed. Unsupported pages show an actionable message. Salary extraction accepts only a single annual USD value. Review employment type, especially when source data is absent or unrecognized. Capture uses `activeTab` and `scripting`, with `storage` for the dashboard address. No persistent host access, cross-origin API writes or scraping service is required. The draft travels in the URL fragment and the dashboard removes that fragment after reading it. Do not put secrets in posting fields.
 
-Extraction tests and the dashboard import/save flow were checked separately. Loading the unpacked extension through the Chrome toolbar and granting activeTab permission still require a manual check before recording.
+The extractor's output from the bundled fixture was carried through the dashboard review, save, refresh, edit, and deletion flow in the built-in browser. Loading the unpacked extension through a Chrome-family toolbar and granting activeTab permission remain a separate, unverified check; the built-in browser does not support unpacked extensions.
 
 Implementation follows [Chrome's activeTab scripting flow](https://developer.chrome.com/docs/extensions/get-started/tutorial/scripts-activetab).
 
@@ -97,7 +97,7 @@ Create the source archive expected by the CloudFormation instructions:
 python3 deploy/package_source.py
 ```
 
-It writes `work/JobTrack-source.zip` with a top-level `JobTrack/` directory and excludes runtime data. See `docs/AWS_DEPLOYMENT.md` for account authorization, upload, validation, cost and cleanup steps. No AWS deployment has been verified yet.
+It writes `work/JobTrack-source.zip` with a top-level `JobTrack/` directory and excludes runtime data. See `docs/AWS_DEPLOYMENT.md` for account authorization, upload, validation, cost and cleanup steps. The available course Sandbox was inspected, but the user paused deployment there; no AWS deployment has been verified yet.
 
 ## GitHub handoff
 

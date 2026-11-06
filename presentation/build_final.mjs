@@ -10,6 +10,8 @@ const evidencePath = path.join(root, "poster", "evidence.json");
 const metricsPath = path.join(root, "evidence", "performance-aws.json");
 const evidence = await fs.readFile(evidencePath, "utf8").then(JSON.parse).catch(() => ({}));
 const metrics = await fs.readFile(metricsPath, "utf8").then(JSON.parse).catch(() => null);
+const localMetrics = await fs.readFile(path.join(root, "evidence", "performance-local.json"), "utf8")
+  .then(JSON.parse).catch(() => null);
 if (!draft && (!evidence.aws_verified || !evidence.roles || !metrics)) {
   throw new Error("Final slides need verified AWS evidence, team roles, and AWS metrics");
 }
@@ -62,7 +64,8 @@ function note(slide, text) { slide.speakerNotes.text = text; }
   slide.background.fill = C.navy;
   shape(slide, "rect", 0, 0, 24, 720, C.teal);
   txt(slide, "JobTrack", 78, 125, 630, 120, 78, C.white, true);
-  txt(slide, "A private cloud-hosted job application tracker", 82, 259, 590, 120, 33, C.white);
+  txt(slide, evidence.aws_verified ? "A private cloud-hosted job application tracker" :
+      "A private job application tracker · AWS deployment planned", 82, 259, 590, 120, 33, C.white);
   txt(slide, "CSE 4333 Cloud Computing · Group 42", 82, 515, 800, 36, 23, C.white, true);
   txt(slide, "Ahmad Salem · afs1009@mavs.uta.edu\nNoorAldeen Waleed · nxw3312@mavs.uta.edu", 82, 564, 930, 95, 20, C.white);
   shape(slide, "roundRect", 795, 156, 328, 76, C.pale);
@@ -120,7 +123,7 @@ function note(slide, text) { slide.speakerNotes.text = text; }
   card(slide, 570, 280, 293, 217, "EC2 · Python API", "Static UI + JSON API\nLoopback port 8000\nNo security-group ingress", C.white);
   txt(slide, "→", 869, 347, 61, 62, 45, C.teal, true);
   card(slide, 930, 280, 251, 217, "Encrypted EBS", "SQLite database\nPersists stop/start", C.white);
-  txt(slide, "CloudFormation provisions · Private S3 holds source ZIP · existing Learner Lab profile grants S3 and SSM access",
+  txt(slide, `${evidence.aws_verified ? "CloudFormation provisions" : "Planned: CloudFormation provisions"} · Private S3 holds source ZIP · existing Learner Lab profile grants S3 and SSM access`,
       580, 531, 594, 64, 19, C.muted);
   note(slide, "Architecture source: deploy/cloudformation.json and docs/ARCHITECTURE.md. Only call it deployed after stack, service, and health checks pass. EC2 has a public IPv4 for outbound bootstrapping but the security group allows no inbound web traffic.");
 }
@@ -156,9 +159,15 @@ function note(slide, text) { slide.speakerNotes.text = text; }
     : "AWS deployment pending verification in this draft";
   shape(slide, "roundRect", 70, 186, 1127, 108, verified ? C.pale : C.gray, C.line);
   txt(slide, line, 99, 212, 1050, 55, 30, C.navy, true);
-  card(slide, 70, 326, 350, 250, "Provision", "CloudFormation creates EC2, encrypted EBS, and no-ingress security group; it attaches the existing lab profile.", C.white);
-  card(slide, 465, 326, 350, 250, "Connect", "An authorized user starts a Systems Manager session and forwards local port 8000.", C.pale);
-  card(slide, 860, 326, 337, 250, "Verify", "Check systemd, /api/health, cloud-backed CRUD, refresh, and persistence.", C.white);
+  card(slide, 70, 326, 350, 250, "Provision", verified ?
+    "CloudFormation creates EC2, encrypted EBS, and no-ingress security group; it attaches the existing lab profile." :
+    "Planned: CloudFormation would create EC2, encrypted EBS, and no-ingress security group.", C.white);
+  card(slide, 465, 326, 350, 250, "Connect", verified ?
+    "An authorized user starts a Systems Manager session and forwards local port 8000." :
+    "Planned: an authorized user would start a Systems Manager port forward.", C.pale);
+  card(slide, 860, 326, 337, 250, "Verify", verified ?
+    "Systemd, /api/health, cloud-backed CRUD, refresh, and persistence were checked." :
+    "Pending: check systemd, health, cloud-backed CRUD, refresh, and persistence.", C.white);
   txt(slide, "The private demo has no public URL or user accounts. Backup is required before instance replacement or stack deletion.",
       83, 612, 1120, 58, 21, C.muted);
   note(slide, "Cloud deployment must be verified with stack events, SSM Online, service status, health, and cloud-backed workflow. Do not present local-only results as AWS. AWS official docs: https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-sessions-start.html");
@@ -176,7 +185,7 @@ function note(slide, text) { slide.speakerNotes.text = text; }
   card(slide, 788, 191, 410, 209, "Browser workflow", "Create · edit · filter · sort · refresh · delete", C.white);
   const extensionText = evidence.extension_verified
     ? "Installed extension verified on the bundled JobPosting fixture, through review, save, and refresh."
-    : "Installed extension still needs end-to-end verification; extraction unit tests alone do not prove toolbar use.";
+    : "Built-in browser verified draft review, save, edit, refresh, and deletion. Installed extension toolbar remains unverified.";
   card(slide, 70, 439, 1128, 169, "Capture check", extensionText, C.white);
   note(slide, "Tests: python3 -m unittest discover -s tests -v; node --test tests/extraction.test.cjs. The original midpoint browser QA is documented in docs/VERIFICATION.md. Update the installed extension claim only after observing it.");
 }
@@ -184,22 +193,26 @@ function note(slide, text) { slide.speakerNotes.text = text; }
 // 8 · Measurements
 {
   const slide = base("Performance evaluation");
-  if (!metrics || !evidence.aws_verified) {
+  const shownMetrics = evidence.aws_verified ? metrics : localMetrics;
+  if (!shownMetrics) {
     card(slide, 70, 201, 1128, 336, "AWS measurements pending",
       "The final chart will show median and p95 HTTP latency for health, list, and search. Method: 50 sequential GET requests per endpoint after 5 warmups through the SSM tunnel.", C.pale);
   } else {
     const entries = [["Health", "health"], ["List all", "list_all"], ["Search", "search_engineer"]];
-    const max = Math.max(...entries.map(([, k]) => metrics.results[k].p95_ms)) || 1;
+    if (!evidence.aws_verified) txt(slide, "Localhost baseline only · cloud measurement pending", 74, 169, 1100, 35, 21, C.muted, true);
+    const max = Math.max(...entries.map(([, k]) => shownMetrics.results[k].p95_ms)) || 1;
     entries.forEach(([label, key], i) => {
-      const r = metrics.results[key];
+      const r = shownMetrics.results[key];
       const y = 210 + i * 120;
       txt(slide, label, 74, y, 190, 42, 25, C.navy, true);
       shape(slide, "roundRect", 262, y + 5, 690 * r.p95_ms / max, 36, C.light);
       shape(slide, "roundRect", 262, y + 5, 690 * r.median_ms / max, 36, C.teal);
       txt(slide, `median ${r.median_ms.toFixed(2)} ms · p95 ${r.p95_ms.toFixed(2)} ms`,
-          965, y + 3, 260, 45, 19, C.muted);
+          965, y + 3, 300, 45, 18, C.muted);
     });
-    txt(slide, `${metrics.requests_per_endpoint} sequential requests per endpoint · ${metrics.database_records} records · ${evidence.instance_type} · ${evidence.region}`,
+    txt(slide, evidence.aws_verified ?
+      `${shownMetrics.requests_per_endpoint} sequential requests per endpoint · ${shownMetrics.database_records} records · ${evidence.instance_type} · ${evidence.region}` :
+      `${shownMetrics.requests_per_endpoint} sequential requests per endpoint · ${shownMetrics.database_records} fictional records · localhost`,
         75, 591, 1120, 60, 21, C.muted);
   }
   note(slide, "Measurement source: evidence/performance-aws.json, produced by tools/benchmark.py. Includes client and SSM tunnel latency. It is a small single-user sample, not a load/scalability test. Do not invent or relabel results.");

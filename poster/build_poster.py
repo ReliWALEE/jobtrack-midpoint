@@ -136,9 +136,10 @@ def metrics_panel(canvas, x, top, evidence, metrics):
     canvas.roundRect(x, bottom, width, height, 24, fill=1, stroke=1)
     canvas.setFillColor(NAVY)
     canvas.setFont("Arial-Bold", 39)
-    canvas.drawString(x + 31, top - 61, "Performance evaluation")
-    if not metrics or not evidence.get("aws_verified"):
-        para(canvas, "AWS measurements pending. The final poster will use observed latency from the deployed instance and state the sample size, record count, region, and instance type.",
+    is_aws = bool(evidence.get("aws_verified"))
+    canvas.drawString(x + 31, top - 61, "Performance evaluation" if is_aws else "Local baseline only")
+    if not metrics:
+        para(canvas, "Performance measurements are pending. The final poster will use observed latency from the deployed instance and state the sample size, record count, region, and instance type.",
              x + 31, top - 120, width - 62, size=30, leading=40)
         return bottom
     results = metrics["results"]
@@ -163,11 +164,15 @@ def metrics_panel(canvas, x, top, evidence, metrics):
         canvas.drawRightString(x + width - 30, y - 61,
                                f"median {item['median_ms']:.2f} ms · p95 {item['p95_ms']:.2f} ms")
         y -= 150
-    region = evidence.get("region", "region not recorded")
-    machine = evidence.get("instance_type", "instance type not recorded")
+    if is_aws:
+        region = evidence.get("region", "region not recorded")
+        machine = evidence.get("instance_type", "instance type not recorded")
+        location = f"{machine}, {region}; includes the client-to-EC2 SSM tunnel."
+    else:
+        location = "localhost only; excludes AWS and the SSM tunnel. Cloud measurement pending."
     caption = (f"{metrics['requests_per_endpoint']} sequential GET requests per endpoint after "
-               f"{metrics['warmup_per_endpoint']} warmups; {metrics['database_records']} records. "
-               f"{machine}, {region}. Includes client-to-EC2 SSM tunnel latency; small single-user sample.")
+               f"{metrics['warmup_per_endpoint']} warmups; {metrics['database_records']} fictional records. "
+               f"{location} Small single-user sample.")
     para(canvas, caption, x + 31, y - 7, width - 62, size=25, leading=32)
     return bottom
 
@@ -186,7 +191,9 @@ def build(output, evidence, metrics):
     c.setFont("Arial-Bold", 101)
     c.drawString(MARGIN, PAGE_H - 161, "JobTrack")
     c.setFont("Arial", 43)
-    c.drawString(MARGIN, PAGE_H - 230, "A private cloud-hosted job application tracker")
+    c.drawString(MARGIN, PAGE_H - 230,
+                 "A private cloud-hosted job application tracker" if evidence.get("aws_verified")
+                 else "A private job application tracker · AWS deployment planned")
     c.setFont("Arial", 29)
     c.drawString(MARGIN, PAGE_H - 298, "CSE 4333 Cloud Computing · Group 42")
     c.drawRightString(PAGE_W - MARGIN, PAGE_H - 298, "Ahmad Salem · NoorAldeen Waleed")
@@ -215,9 +222,12 @@ def build(output, evidence, metrics):
         "The responsive dashboard calls same-origin JSON endpoints. The Python API validates fields and stores UTC timestamps in SQLite.",
         "Endpoints: GET /api/health; GET/POST /api/applications; PUT/DELETE /api/applications/{id}. Search and filters are combined; sort keys are allowlisted.",
     ]) - 28
+    cloud_intro = ("CloudFormation provisions EC2, an encrypted EBS root volume, and a no-ingress security group. Learner Lab's existing instance profile lets EC2 pull its source ZIP from private S3 and use Systems Manager."
+                   if evidence.get("aws_verified") else
+                   "Planned cloud design: CloudFormation would provision EC2, encrypted EBS, and a no-ingress security group, attaching Learner Lab's existing instance profile for S3 and Systems Manager.")
     y2 = panel(c, x2, y2, COL, "Cloud services", [
-        "CloudFormation provisions EC2, an encrypted EBS root volume, and a no-ingress security group. Learner Lab's existing instance profile lets EC2 pull its source ZIP from private S3 and use Systems Manager.",
-        "Systems Manager port forwarding lets an authorized user reach the loopback-only app without opening a public web port.",
+        cloud_intro,
+        "Systems Manager port forwarding would let an authorized user reach the loopback-only app without opening a public web port." if not evidence.get("aws_verified") else "Systems Manager port forwarding lets an authorized user reach the loopback-only app without opening a public web port.",
     ]) - 28
     y2 = panel(c, x2, y2, COL, "Alternatives considered", [
         "A public HTTPS app needs login and per-user authorization. RDS or DynamoDB would improve managed storage; serverless hosting could scale differently.",
@@ -225,14 +235,14 @@ def build(output, evidence, metrics):
     ]) - 28
     y2 = panel(c, x2, y2, COL, "Challenges and lessons", [
         "Browser QA exposed a Reset-button conflict. Final API review exposed unclosed SQLite connections. Both were fixed and regression-tested.",
-        "SSM keeps the service private but adds a tunnel to the demo workflow. A single EBS root volume needs backup before termination.",
+        "The planned SSM tunnel would keep the cloud service private. A single EBS root volume would need backup before termination." if not evidence.get("aws_verified") else "SSM keeps the service private but adds a tunnel to the demo workflow. A single EBS root volume needs backup before termination.",
     ]) - 28
     roles = evidence.get("roles") or "Team roles await confirmation. The proposal credits NoorAldeen with the idea and Ahmad with proposal review; final work should be described accurately."
     y2 = panel(c, x2, y2, COL, "Team contributions", [roles])
 
     y3 = metrics_panel(c, x3, lower_top, evidence, metrics) - 28
     y3 = panel(c, x3, y3, COL, "Verification", [
-        "11 API/database tests and 5 extractor tests pass. Browser checks cover create, edit, refresh, filters, sorting, and deletion.",
+        "11 API/database tests and 5 extractor tests pass. The built-in browser checked draft review, save, edit, refresh, filters, sorting, and deletion.",
         "Cloud and installed-extension results are reported only after end-to-end verification.",
     ]) - 28
     y3 = panel(c, x3, y3, COL, "Machine learning", [
@@ -267,6 +277,9 @@ def main():
     metrics = json.loads(args.metrics.read_text()) if args.metrics.exists() else None
     if args.output.name.upper().find("DRAFT") < 0 and (not evidence.get("aws_verified") or not metrics or not evidence.get("roles")):
         raise SystemExit("Refusing to create final poster without verified AWS evidence, metrics, and team roles")
+    if metrics is None and not evidence.get("aws_verified"):
+        local_path = ROOT / "evidence" / "performance-local.json"
+        metrics = json.loads(local_path.read_text()) if local_path.exists() else None
     build(args.output, evidence, metrics)
     print(args.output)
 
