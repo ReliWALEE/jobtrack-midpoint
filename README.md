@@ -69,7 +69,7 @@ python3 -m unittest discover -s tests -v
 node --test tests/extraction.test.cjs
 ```
 
-The committed CI workflow runs these checks on pushes and pull requests. See `docs/VERIFICATION.md` for actual results and the limits of browser/extension/AWS verification.
+The committed CI workflow is configured to run these checks on pushes and pull requests. Local tests passed; a hosted workflow run for the final fork branch has not appeared yet. See `docs/VERIFICATION.md` for actual results and the limits of browser/extension/AWS verification.
 
 ## Files and architecture
 
