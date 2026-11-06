@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "JobTrack private midpoint demo. No inbound network ports. SSM tunnel required.",
+  "Description": "JobTrack private AWS Academy Learner Lab deployment. No inbound network ports; SSM tunnel required.",
   "Parameters": {
     "VpcId": {
       "Type": "AWS::EC2::VPC::Id"
@@ -28,58 +28,14 @@
         "t3.micro",
         "t3.small"
       ]
+    },
+    "InstanceProfileName": {
+      "Type": "String",
+      "Default": "LabInstanceProfile",
+      "Description": "Existing Learner Lab EC2 instance profile; verify in the account before deployment"
     }
   },
   "Resources": {
-    "Role": {
-      "Type": "AWS::IAM::Role",
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Principal": {
-                "Service": "ec2.amazonaws.com"
-              },
-              "Action": "sts:AssumeRole"
-            }
-          ]
-        },
-        "ManagedPolicyArns": [
-          {
-            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
-          }
-        ],
-        "Policies": [
-          {
-            "PolicyName": "ReadJobTrackSource",
-            "PolicyDocument": {
-              "Version": "2012-10-17",
-              "Statement": [
-                {
-                  "Effect": "Allow",
-                  "Action": "s3:GetObject",
-                  "Resource": {
-                    "Fn::Sub": "arn:${AWS::Partition}:s3:::${SourceBucket}/${SourceKey}"
-                  }
-                }
-              ]
-            }
-          }
-        ]
-      }
-    },
-    "Profile": {
-      "Type": "AWS::IAM::InstanceProfile",
-      "Properties": {
-        "Roles": [
-          {
-            "Ref": "Role"
-          }
-        ]
-      }
-    },
     "SecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
@@ -105,7 +61,7 @@
           "Ref": "InstanceType"
         },
         "IamInstanceProfile": {
-          "Ref": "Profile"
+          "Ref": "InstanceProfileName"
         },
         "MetadataOptions": {
           "HttpTokens": "required"
@@ -137,13 +93,13 @@
         ],
         "UserData": {
           "Fn::Base64": {
-            "Fn::Sub": "#!/bin/bash\nset -euxo pipefail\ndnf install -y python3 unzip awscli-2\nmkdir -p /opt/jobtrack /var/lib/jobtrack\naws s3 cp s3://${SourceBucket}/${SourceKey} /tmp/jobtrack.zip --region ${AWS::Region}\nunzip /tmp/jobtrack.zip -d /opt/jobtrack\nuseradd --system jobtrack\nchown jobtrack:jobtrack /var/lib/jobtrack\ncat > /etc/systemd/system/jobtrack.service <<'UNIT'\n[Unit]\nDescription=JobTrack midpoint\nAfter=network.target\n[Service]\nUser=jobtrack\nWorkingDirectory=/opt/jobtrack/JobTrack\nEnvironment=JOBTRACK_DB=/var/lib/jobtrack/jobtrack.sqlite3\nExecStart=/usr/bin/python3 server.py --host 127.0.0.1 --port 8000\nRestart=on-failure\nNoNewPrivileges=true\nProtectSystem=strict\nReadWritePaths=/var/lib/jobtrack\n[Install]\nWantedBy=multi-user.target\nUNIT\nsystemctl daemon-reload\nsystemctl enable --now jobtrack\n"
+            "Fn::Sub": "#!/bin/bash\nset -euxo pipefail\ndnf install -y python3.11 unzip\ncommand -v aws\n/usr/bin/python3.11 --version\nmkdir -p /opt/jobtrack /var/lib/jobtrack\naws s3 cp s3://${SourceBucket}/${SourceKey} /tmp/jobtrack.zip --region ${AWS::Region}\nunzip /tmp/jobtrack.zip -d /opt/jobtrack\nuseradd --system jobtrack\nchown jobtrack:jobtrack /var/lib/jobtrack\ncat > /etc/systemd/system/jobtrack.service <<'UNIT'\n[Unit]\nDescription=JobTrack\nAfter=network.target\n[Service]\nUser=jobtrack\nWorkingDirectory=/opt/jobtrack/JobTrack\nEnvironment=JOBTRACK_DB=/var/lib/jobtrack/jobtrack.sqlite3\nExecStart=/usr/bin/python3.11 server.py --host 127.0.0.1 --port 8000\nRestart=on-failure\nNoNewPrivileges=true\nProtectSystem=strict\nReadWritePaths=/var/lib/jobtrack\n[Install]\nWantedBy=multi-user.target\nUNIT\nsystemctl daemon-reload\nsystemctl enable --now jobtrack\n"
           }
         },
         "Tags": [
           {
             "Key": "Name",
-            "Value": "JobTrack-midpoint"
+            "Value": "JobTrack-final"
           }
         ]
       }

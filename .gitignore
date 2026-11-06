@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .env
 node_modules/
+presentation/node_modules
 .DS_Store
 *.sqlite3*
 work/
