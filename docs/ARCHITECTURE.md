@@ -12,8 +12,8 @@ One `applications` table: id, company, title, location, salary (nullable annual 
 
 ## AWS target
 
-An EC2 instance hosts the same server and SQLite file. IAM permits only the specified source ZIP read plus SSM management. The security group admits no inbound traffic. A user with authorized AWS access forwards local port 8000 to the instance. The encrypted EBS root disk persists through stop/start, but terminates with the instance. CloudFormation configuration is prepared and has not been deployed.
+An Amazon Linux 2023 EC2 instance hosts the same server with Python 3.11 and an SQLite file. The AWS Academy Learner Lab template attaches its existing `LabInstanceProfile`, which must permit source ZIP reads and SSM management; this lab profile has broader permissions than a production-specific role. The security group admits no inbound traffic. A user with authorized AWS access forwards local port 8000 to the instance. The encrypted EBS root disk persists through stop/start, but terminates with the instance. CloudFormation configuration is prepared and has not yet been verified in AWS.
 
 ## Limits
 
-The built-in Python server is suitable for a local/private midpoint demonstration. A public deployment requires authentication, per-user authorization, TLS and a hardened server. SQLite is not shared across replicas. No email automation, employer submission, job-board login integration, OAuth, telemetry, or background crawler is implemented.
+The built-in Python server is suitable for a local/private class demonstration. A public deployment requires authentication, per-user authorization, TLS and a hardened server. SQLite is not shared across replicas. No email automation, employer submission, job-board login integration, OAuth, telemetry, or background crawler is implemented.

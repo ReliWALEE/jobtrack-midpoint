@@ -1,6 +1,8 @@
 # JobTrack
 
-A runnable single-user job application tracker for a midpoint demonstration. Built from the requested checklist because the referenced chat contained no recoverable implementation or attached deck. Exact course rubric and original architecture were unavailable.
+For the Group 42 final-project requirements and verification status, see [`docs/FINAL_TEAM_HANDOFF.md`](docs/FINAL_TEAM_HANDOFF.md) and [`docs/VERIFICATION.md`](docs/VERIFICATION.md). The user has directed that the final poster and slides be prepared but **not submitted**.
+
+A runnable single-user job application tracker. The dashboard, API, database, and structured-posting capture flow were developed for a private class demonstration. Cloud deployment must be verified before it is described as live.
 
 ## Run in two steps
 
@@ -30,7 +32,7 @@ Run the seed once while the server is running. It checks existing company/title 
 - Overview counts use all records. The table count uses filtered records.
 - Responsive dashboard, empty state, form validation and visible failure messages.
 
-This midpoint app has no user accounts or per-user isolation. Keep local or use the private AWS tunnel described in the deployment guide. It does not submit employer applications.
+This app has no user accounts or per-user isolation. Keep local or use the private AWS tunnel described in the deployment guide. It does not submit employer applications.
 
 ## Chrome extension
 
@@ -42,7 +44,7 @@ This midpoint app has no user accounts or per-user isolation. Keep local or use 
 
 Supported extraction is Schema.org JSON-LD JobPosting, including arrays and `@graph`. The bundled fictional Northstar Labs page is the reliable demonstration fixture. Arbitrary job boards, authenticated sites, iframes and Chrome internal pages are not guaranteed. Unsupported pages show an actionable message. Salary extraction accepts only a single annual USD value. Review employment type, especially when source data is absent or unrecognized. Capture uses `activeTab` and `scripting`, with `storage` for the dashboard address. No persistent host access, cross-origin API writes or scraping service is required. The draft travels in the URL fragment and the dashboard removes that fragment after reading it. Do not put secrets in posting fields.
 
-Extraction tests and the dashboard import/save flow were checked separately. Loading the unpacked extension through the Chrome toolbar and granting activeTab permission still require a manual check before recording.
+The extractor's output from the bundled fixture was carried through the dashboard review, save, refresh, edit, and deletion flow in the built-in browser. Loading the unpacked extension through a Chrome-family toolbar and granting activeTab permission remain a separate, unverified check; the built-in browser does not support unpacked extensions.
 
 Implementation follows [Chrome's activeTab scripting flow](https://developer.chrome.com/docs/extensions/get-started/tutorial/scripts-activetab).
 
@@ -67,13 +69,13 @@ python3 -m unittest discover -s tests -v
 node --test tests/extraction.test.cjs
 ```
 
-The committed CI workflow runs these checks on pushes and pull requests. See `docs/VERIFICATION.md` for actual results and the limits of browser/extension/AWS verification.
+The committed CI workflow is configured to run these checks on pushes and pull requests. Local tests passed; a hosted workflow run for the final fork branch has not appeared yet. See `docs/VERIFICATION.md` for actual results and the limits of browser/extension/AWS verification.
 
 ## Files and architecture
 
 `web/` contains the browser interface, `server.py` serves static files and the REST API, SQLite persists records under `data/`, and `extension/` captures a reviewed draft. Browser requests and API share one origin. See `docs/ARCHITECTURE.md`, `docs/DEMO_SCRIPT.md` and `docs/AWS_DEPLOYMENT.md`.
 
-## Docker option (configuration prepared, not built here)
+## Docker option (locally built and smoke tested)
 
 ```sh
 docker build -t jobtrack .
@@ -81,10 +83,11 @@ docker run --rm -p 127.0.0.1:8000:8000 -v jobtrack-data:/data jobtrack
 ```
 
 The named volume preserves data. Never remove the volume unless you intend to erase it.
+The image was built locally on November 6; its health, list, and dashboard endpoints returned HTTP 200 on a temporary container. This is separate from the intended AWS Learner Lab deployment.
 
 ## Presentation
 
-`presentation/JobTrack-Midpoint.pptx` contains the editable midpoint slides with actual screenshots and timed speaker notes. The recording guide is in `docs/DEMO_SCRIPT.md`.
+`presentation/JobTrack-Midpoint.pptx` is the archived midpoint deck. `presentation/build_final.mjs` builds the editable final deck after verified cloud evidence is recorded. The midpoint recording guide is in `docs/DEMO_SCRIPT.md`.
 
 ## AWS source package
 
@@ -94,7 +97,7 @@ Create the source archive expected by the CloudFormation instructions:
 python3 deploy/package_source.py
 ```
 
-It writes `work/JobTrack-source.zip` with a top-level `JobTrack/` directory and excludes runtime data. See `docs/AWS_DEPLOYMENT.md` for account authorization, upload, validation, cost and cleanup steps. No AWS deployment has occurred.
+It writes `work/JobTrack-source.zip` with a top-level `JobTrack/` directory and excludes runtime data. See `docs/AWS_DEPLOYMENT.md` for account authorization, upload, validation, cost and cleanup steps. The available course Sandbox was inspected, but the user paused deployment there; no AWS deployment has been verified yet.
 
 ## GitHub handoff
 

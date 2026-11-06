@@ -1,5 +1,6 @@
-"""JobTrack midpoint: dependency-free HTTP API with SQLite persistence."""
+"""JobTrack: dependency-free HTTP API with SQLite persistence."""
 import argparse, json, os, sqlite3, threading
+from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -15,9 +16,22 @@ def connect(path):
     db.row_factory = sqlite3.Row
     return db
 
+@contextmanager
+def database(path):
+    """Commit or roll back the request and always release its connection."""
+    db = connect(path)
+    try:
+        yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
 def initialize(path):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    with connect(path) as db:
+    with database(path) as db:
         db.execute('PRAGMA journal_mode=WAL')
         db.execute("""CREATE TABLE IF NOT EXISTS applications (
           id INTEGER PRIMARY KEY, company TEXT NOT NULL, title TEXT NOT NULL,
@@ -57,7 +71,7 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         path=urlsplit(self.path).path
         if path=='/api/health':
-            with connect(self.server.db_path) as db: db.execute('SELECT 1')
+            with database(self.server.db_path) as db: db.execute('SELECT 1')
             return self.respond(200,{'status':'ok','database':'sqlite'})
         if path=='/api/applications':
             try:
@@ -76,7 +90,7 @@ class Handler(SimpleHTTPRequestHandler):
                 if direction not in ('asc','desc'): raise ValueError('Invalid direction')
                 sql='SELECT * FROM applications'+(' WHERE '+' AND '.join(clauses) if clauses else '')
                 sql+=f' ORDER BY {sort} IS NULL, {sort} {direction}, id DESC'
-                with connect(self.server.db_path) as db: rows=[dict(x) for x in db.execute(sql,params)]
+                with database(self.server.db_path) as db: rows=[dict(x) for x in db.execute(sql,params)]
                 return self.respond(200,rows)
             except ValueError as e: return self.respond(400,{'error':str(e)})
         if path.startswith('/api/'): return self.respond(404,{'error':'Not found'})
@@ -94,7 +108,7 @@ class Handler(SimpleHTTPRequestHandler):
             origin=self.headers.get('Origin')
             if origin and origin not in ('http://'+self.headers.get('Host',''),'https://'+self.headers.get('Host','')):
                 return self.respond(403,{'error':'Cross-origin writes are blocked'})
-            with connect(self.server.db_path) as db:
+            with database(self.server.db_path) as db:
                 if item_id is not None and not db.execute('SELECT id FROM applications WHERE id=?',(item_id,)).fetchone():
                     return self.respond(404,{'error':'Application not found'})
                 if method=='DELETE':
