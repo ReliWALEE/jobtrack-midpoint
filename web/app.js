@@ -1,4 +1,4 @@
-const $=s=>document.querySelector(s), statuses=['Saved','Applied','Interview','Offer','Rejected'], types=['Full-time','Part-time','Contract','Internship'];
+const $=s=>document.querySelector(s), statuses=['Saved','Applied','Interview','Offer','Rejected'], types=['Full-time','Part-time','Contract','Internship','Not specified'];
 for(const [select,values] of [['#status',statuses],['#type',types],['[name=status]',statuses],['[name=employment_type]',types]]) for(const v of values) $(select).add(new Option(v,v));
 let records=[],editing=null,request=0;
 async function api(path,options){const response=await fetch('/api/'+path,options);const data=await response.json();if(!response.ok)throw Error(data.error||'Request failed');return data;}
