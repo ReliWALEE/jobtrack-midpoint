@@ -1,6 +1,6 @@
 FROM python:3.13-slim
 WORKDIR /app
-COPY server.py .
+COPY server.py jobs.py ./
 COPY web ./web
 RUN useradd --uid 10001 --create-home jobtrack && mkdir /data && chown jobtrack /data
 USER jobtrack

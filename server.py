@@ -5,10 +5,11 @@ from datetime import date, datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit, parse_qs
+from jobs import JobDiscovery, ProviderError
 
 ROOT = Path(__file__).resolve().parent
 STATUSES = ('Saved', 'Applied', 'Interview', 'Offer', 'Rejected')
-TYPES = ('Full-time', 'Part-time', 'Contract', 'Internship')
+TYPES = ('Full-time', 'Part-time', 'Contract', 'Internship', 'Not specified')
 FIELDS = ('company','title','location','salary','employment_type','status','applied_date','url','notes')
 
 def connect(path):
@@ -73,6 +74,14 @@ class Handler(SimpleHTTPRequestHandler):
         if path=='/api/health':
             with database(self.server.db_path) as db: db.execute('SELECT 1')
             return self.respond(200,{'status':'ok','database':'sqlite'})
+        if path=='/api/job-sources':
+            return self.respond(200,self.server.jobs.sources())
+        if path=='/api/jobs':
+            q=parse_qs(urlsplit(self.path).query)
+            try:
+                return self.respond(200,self.server.jobs.search(q.get('source',['remotive'])[0],q.get('q',[''])[0],q.get('location',[''])[0]))
+            except ValueError as e: return self.respond(400,{'error':str(e)})
+            except ProviderError as e: return self.respond(503,{'error':str(e)})
         if path=='/api/applications':
             try:
                 q=parse_qs(urlsplit(self.path).query); clauses=[]; params=[]
@@ -103,11 +112,19 @@ class Handler(SimpleHTTPRequestHandler):
                 pieces=path.strip('/').split('/')
                 if len(pieces)!=3 or pieces[:2]!=['api','applications']: return self.respond(404,{'error':'Not found'})
                 item_id=int(pieces[2])
-            elif path!='/api/applications': return self.respond(404,{'error':'Not found'})
+            elif path!='/api/applications' and not (path.startswith('/api/jobs/') and path.endswith('/save')):
+                return self.respond(404,{'error':'Not found'})
             # Same-origin JSON writes only. The extension opens a reviewed draft in the dashboard.
             origin=self.headers.get('Origin')
             if origin and origin not in ('http://'+self.headers.get('Host',''),'https://'+self.headers.get('Host','')):
                 return self.respond(403,{'error':'Cross-origin writes are blocked'})
+            if method=='POST' and path.startswith('/api/jobs/'):
+                pieces=path.strip('/').split('/')
+                if len(pieces)!=4 or pieces[3]!='save': return self.respond(404,{'error':'Not found'})
+                try:
+                    row,created=self.server.jobs.save(pieces[2])
+                    return self.respond(201 if created else 200,{'application':row,'created':created})
+                except LookupError as e: return self.respond(404,{'error':str(e)})
             with database(self.server.db_path) as db:
                 if item_id is not None and not db.execute('SELECT id FROM applications WHERE id=?',(item_id,)).fetchone():
                     return self.respond(404,{'error':'Application not found'})
@@ -130,7 +147,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 def create_server(host='127.0.0.1',port=8000,db_path=None):
     db_path=str(db_path or os.environ.get('JOBTRACK_DB',ROOT/'data/jobtrack.sqlite3')); initialize(db_path)
-    server=ThreadingHTTPServer((host,port),Handler); server.db_path=db_path; return server
+    server=ThreadingHTTPServer((host,port),Handler); server.db_path=db_path; server.jobs=JobDiscovery(db_path); return server
 if __name__=='__main__':
     parser=argparse.ArgumentParser(); parser.add_argument('--host',default='127.0.0.1'); parser.add_argument('--port',type=int,default=8000); args=parser.parse_args()
     server=create_server(args.host,args.port); print(f'JobTrack: http://{args.host}:{server.server_port}',flush=True)

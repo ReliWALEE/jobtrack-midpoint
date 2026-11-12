@@ -5,7 +5,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "work" / "JobTrack-source.zip"
 DIRECTORIES = ("web", "extension", "tests", "deploy", "docs", "presentation", ".github")
-FILES = ("server.py", "seed_demo.py", "requirements.txt", "README.md", "Dockerfile", ".gitignore", ".dockerignore")
+FILES = ("jobs.py", ".env.example", "server.py", "seed_demo.py", "requirements.txt", "README.md", "Dockerfile", ".gitignore", ".dockerignore")
 
 def main():
     selected = [ROOT / name for name in FILES if (ROOT / name).is_file()]
