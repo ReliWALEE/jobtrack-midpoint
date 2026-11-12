@@ -17,3 +17,10 @@ An Amazon Linux 2023 EC2 instance hosts the same server with Python 3.11 and an 
 ## Limits
 
 The built-in Python server is suitable for a local/private class demonstration. A public deployment requires authentication, per-user authorization, TLS and a hardened server. SQLite is not shared across replicas. No email automation, employer submission, job-board login integration, OAuth, telemetry, or background crawler is implemented.
+
+
+## Job discovery extension (November 12, 2026)
+
+`web/jobs.html` / `web/jobs.js` → same-origin `/api/jobs` → `jobs.py` → fixed Remotive or JSearch HTTPS endpoint. The server holds credentials; browser code receives normalized public listings only. SQLite adds `job_cache`, `discovered_jobs`, and `job_imports` alongside existing applications, without replacing application data. Saving a discovered ID uses a transaction and job-ID/exact-URL duplicate checks. Application edits survive subsequent saves.
+
+Remotive's full public sample is cached for six hours and filtered locally. JSearch caches each source/query/location for 15 minutes, fetching one page. There is no unattended scheduler: opt-in polling is in the visible browser page. Provider failures have bounded timeouts and body size, retry delays, and stale-cache warnings. Provider payloads render as text and posting URLs allow HTTP(S) only. JSearch includes Indeed/LinkedIn publisher filtering via third-party search; a live API key is still required to verify those providers.
