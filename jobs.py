@@ -8,9 +8,25 @@ import threading
 import time
 from contextlib import closing
 from datetime import date, datetime, timezone
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
+
+KEY_PATH = Path(__file__).resolve().with_name('.env')
+
+def configured_key():
+    """Read only this setting; never execute or export dotenv file contents."""
+    if 'JSEARCH_API_KEY' in os.environ:
+        return os.environ['JSEARCH_API_KEY'].strip()
+    try:
+        for line in KEY_PATH.read_text(encoding='utf-8').splitlines():
+            name, separator, value = line.partition('=')
+            if separator and name.strip() == 'JSEARCH_API_KEY':
+                return value.strip().strip('\"\'')
+    except (OSError, UnicodeError):
+        pass
+    return ''
 
 REMOTIVE_URL = 'https://remotive.com/api/remote-jobs'
 JSEARCH_URL = 'https://api.openwebninja.com/jsearch/search-v2'
@@ -89,7 +105,7 @@ class JobDiscovery:
             ''')
 
     def sources(self):
-        configured = bool(os.environ.get('JSEARCH_API_KEY', '').strip())
+        configured = bool(configured_key())
         return {'sources': [
             {'id': 'remotive', 'name': 'Remotive · remote jobs', 'ready': True},
             {'id': 'jsearch', 'name': 'All boards · JSearch', 'ready': configured},
@@ -122,7 +138,7 @@ class JobDiscovery:
         if len(query) > 200 or len(location) > 200:
             raise ValueError('Search and location must each be at most 200 characters')
         query, location = query.strip(), location.strip()
-        key = os.environ.get('JSEARCH_API_KEY', '').strip()
+        key = configured_key()
         if provider != 'remotive' and not key:
             raise ProviderError('Connect a JSearch API key to search Indeed, LinkedIn, and other boards. Remotive remote jobs work without an account.')
         if provider != 'remotive' and not query:
@@ -147,6 +163,8 @@ class JobDiscovery:
                             text += ' via ' + provider
                         data = self.fetch(JSEARCH_URL + '?' + urlencode({'query': text, 'country': 'us', 'language': 'en', 'page': 1, 'num_pages': 1}), key)
                         raw = data.get('data') if isinstance(data, dict) else None
+                        if isinstance(raw, dict):
+                            raw = raw.get('jobs')  # search-v2 wraps jobs with a pagination cursor
                     if not isinstance(raw, list):
                         raise ProviderError('The job source returned an unexpected response. Try again later.')
                     rows = [job for item in raw if (job := normalize(item, 'remotive' if provider == 'remotive' else 'jsearch', provider if provider in ('indeed', 'linkedin') else ''))]

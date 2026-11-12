@@ -11,7 +11,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from jobs import JobDiscovery, ProviderError, normalize
+from jobs import JobDiscovery, ProviderError, normalize, configured_key
 from server import create_server, database
 
 REMOTE = {'id': 42, 'title': 'Python Engineer', 'company_name': 'Example',
@@ -34,6 +34,19 @@ class Discovery(unittest.TestCase):
         self.env.start()
     def tearDown(self):
         self.env.stop(); self.server.server_close(); self.tmp.cleanup()
+    def test_private_key_file_and_environment_precedence(self):
+        key_file = Path(self.tmp.name) / '.env'
+        key_file.write_text('OTHER_SETTING=must-not-load\nJSEARCH_API_KEY="fixture-key"\n')
+        with patch('jobs.KEY_PATH',key_file), patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(configured_key(), 'fixture-key')
+            self.assertNotIn('OTHER_SETTING',os.environ)
+            with patch.dict(os.environ, {'JSEARCH_API_KEY':'environment-key'}):
+                self.assertEqual(configured_key(), 'environment-key')
+            with patch.dict(os.environ, {'JSEARCH_API_KEY':''}):
+                self.assertEqual(configured_key(), '')
+            key_file.unlink()
+            self.assertEqual(configured_key(), '')
+
     def test_remotive_fetch_once_and_filter_locally(self):
         with patch.object(self.jobs, 'fetch', return_value={'jobs':[REMOTE, dict(REMOTE, id=43, title='Designer', url='https://remotive.com/43')]}) as fetch:
             result = self.jobs.search(query='python', location='United States')
@@ -75,7 +88,7 @@ class Discovery(unittest.TestCase):
             fetch.assert_not_called()
         self.assertFalse(self.jobs.sources()['jsearch_ready'])
     def test_jsearch_query_key_and_publisher_selection(self):
-        with patch.dict(os.environ, {'JSEARCH_API_KEY':'test-key'}), patch.object(self.jobs,'fetch',return_value={'data':[BROAD]}) as fetch:
+        with patch.dict(os.environ, {'JSEARCH_API_KEY':'test-key'}), patch.object(self.jobs,'fetch',return_value={'data':{'jobs':[BROAD],'cursor':'next-page'}}) as fetch:
             row = self.jobs.search('linkedin','developer','Chicago')['jobs'][0]
             self.assertEqual(row['source'], 'LinkedIn'); self.assertEqual(row['salary'], 100000)
             url, key = fetch.call_args.args
@@ -84,6 +97,13 @@ class Discovery(unittest.TestCase):
             self.assertTrue(self.jobs.sources()['jsearch_ready'])
             self.assertEqual(self.jobs.search('linkedin','developer','Chicago')['total'], 1)
             self.assertEqual(fetch.call_count, 1)
+    def test_jsearch_empty_v2_and_legacy_payloads(self):
+        with patch.dict(os.environ, {'JSEARCH_API_KEY':'test-key'}):
+            with patch.object(self.jobs,'fetch',return_value={'status':'OK','data':{'jobs':[],'cursor':None}}):
+                self.assertEqual(self.jobs.search('jsearch','empty')['total'], 0)
+            with patch.object(self.jobs,'fetch',return_value={'data':[BROAD]}):
+                self.assertEqual(self.jobs.search('jsearch','legacy')['total'], 1)
+
     def test_failure_retry_throttle_and_stale_cache(self):
         with patch.object(self.jobs,'fetch',side_effect=ProviderError('Offline')) as fetch:
             for _ in range(2):
