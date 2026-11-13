@@ -2,6 +2,14 @@
 
 Original midpoint verification date: October 16, 2026, America/Chicago. Final-project checks below were updated November 6, 2026. Claims about AWS and the installed extension remain pending until they are actually observed.
 
+## November 12 fresh-account startup
+
+- Default startup attempts to create a fresh OpenWeb Ninja account and key for each server process, including restarts against the same database. Automatic mode uses only the newly issued key. An explicit `JOBTRACK_AUTO_ACCOUNT=0` selects manual configuration.
+- Provider readiness now includes pending, ready, and failed account-setup status without exposing credentials. The jobs page checks pending setup every five seconds while visible and connects automatically when the new key becomes ready. Failed setup remains visible and does not reuse saved or manual keys.
+- **46 Python tests and 8 JavaScript tests passed locally.** Regressions cover repeated starts, pending/failed setup, empty keys, manual configuration, archive permissions, and frontend readiness changes. Tests use simulated provider responses and do not create accounts.
+- The rebuilt Docker image passed all 46 Python tests as its default non-root user. Copied Python modules are readable by that user, and generated source ZIP entries use mode 0644 for root extraction followed by non-root execution.
+- Native-browser verification with simulated signup confirmed pending setup transitions to connected fixture results without reloading the jobs page. Live account issuance itself was not verified in this check. AWS deployment and the installed extension remain unverified.
+
 ## November 6 final-project preparation
 
 - On the final working branch, **11 Python API/database tests** and **5 Node extraction tests** pass. SQLite connections now close after each request; the browser UI no longer says “midpoint.”

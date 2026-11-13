@@ -1,8 +1,8 @@
 FROM python:3.13-slim
 WORKDIR /app
-COPY server.py jobs.py ./
+COPY server.py jobs.py account_factory.py ./
 COPY web ./web
-RUN useradd --uid 10001 --create-home jobtrack && mkdir /data && chown jobtrack /data
+RUN chmod 0644 server.py jobs.py account_factory.py && useradd --uid 10001 --create-home jobtrack && mkdir /data && chown jobtrack /data
 USER jobtrack
 ENV JOBTRACK_DB=/data/jobtrack.sqlite3
 VOLUME ["/data"]
