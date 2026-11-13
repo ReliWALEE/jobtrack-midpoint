@@ -39,7 +39,7 @@ This app has no user accounts or per-user isolation. Keep local or use the priva
 Open **Find jobs** in the dashboard, or visit `http://127.0.0.1:8000/jobs.html`.
 
 - **Remotive:** real remote listings work immediately without an API account. Search title/company keywords and the employer's location eligibility text. Keep the original Remotive link and attribution. This public feed is a limited selection, delayed by 24 hours; it is not the entire job market.
-- **Indeed / LinkedIn / all boards:** the implemented JSearch adapter searches listings aggregated by OpenWeb Ninja through Google for Jobs. It is a third-party connection, not a direct Indeed or LinkedIn partnership. Coverage and publisher availability vary. A user-owned JSearch API key is required; these sources show a connection prompt until configured. Live Indeed and LinkedIn searches were verified on November 12, 2026, returning 10 publisher-matching listings each for software engineer in Chicago. Each installation needs its own private key.
+- **Indeed / LinkedIn / all boards:** the implemented JSearch adapter searches listings aggregated by OpenWeb Ninja through Google for Jobs. It is a third-party connection, not a direct Indeed or LinkedIn partnership. Coverage and publisher availability vary. Every server run creates one throwaway mailbox at mail.tm, registers a fresh OpenWeb Ninja account with it, confirms the emailed verification, and uses that account's free-tier credits for this run's searches (`account_factory.py`). Setup happens after startup in a background thread. The jobs page shows pending, ready, or failed status, checks pending setup every five seconds while visible, and connects without reloading when the new key is ready. Automatic mode uses only this run's newly issued key; a failure keeps broad searches unavailable and asks you to restart. Saved keys and manually configured keys are not reused in automatic mode. Set `JOBTRACK_AUTO_ACCOUNT=0` explicitly to use your own `JSEARCH_API_KEY` instead. Creating many free accounts is subject to OpenWeb Ninja's terms and limits; only the free tier is used, no paid plan or charges are ever selected. Remotive works independently of account setup.
 - **Save to applications** imports a listing as Saved. Repeat saves return the existing application and preserve edits. Deleting an application lets you save it again. Saving does not submit an employer application.
 - The last search is remembered in this browser. Optional refresh runs every 30 minutes while the page is open and visible. There is no unattended server scheduler or email alert service.
 - SQLite retains feed caches and discovered listings across restarts. Remotive is fetched at most once per six hours per database, with local filtering; JSearch searches are cached for 15 minutes. A failed first attempt waits a minute before retry; a failed refresh retains older listings with a visible warning and timestamp. Clicking Find jobs does not bypass provider caches. Only the first 50 matching results are displayed; JSearch requests one provider page per search.
@@ -47,19 +47,22 @@ Open **Find jobs** in the dashboard, or visit `http://127.0.0.1:8000/jobs.html`.
 
 ### Connect JSearch locally
 
-1. Create your own account at [OpenWeb Ninja](https://app.openwebninja.com) and activate JSearch. Review the current plan and request limits; JobTrack does not create an account, choose a paid plan, or authorize charges.
+By default JobTrack creates a new OpenWeb Ninja account and key on each fresh server process. Restarting against an existing database still creates a new account; refreshing a browser page does not. Setup is asynchronous and can take several minutes under provider rate limits. The manual path below is an explicit opt-out using `JOBTRACK_AUTO_ACCOUNT=0`, not an automatic fallback.
+
+1. *(Only when `JOBTRACK_AUTO_ACCOUNT=0`.)* Create your own account at [OpenWeb Ninja](https://app.openwebninja.com) and activate JSearch. Review the current plan and request limits; JobTrack does not choose a paid plan or authorize charges either way.
 2. On the computer running JobTrack, set the `JSEARCH_API_KEY` environment variable. On macOS/Linux, this example prompts without echoing the key or putting it in command history:
 
    ```sh
    read -r -s -p "JSearch API key: " JSEARCH_API_KEY
    export JSEARCH_API_KEY
+   export JOBTRACK_AUTO_ACCOUNT=0
    python3 server.py
    ```
 
-   In PowerShell, set the environment variable using your preferred local secret manager, then launch the server from that session. `.env.example` lists the setting; the server also reads `JSEARCH_API_KEY` from a local `.env` beside `server.py`. The environment takes precedence. Other `.env` entries are ignored; the file is never executed. Keep this file private (`chmod 600 .env` on macOS/Linux). With Docker, pass `-e JSEARCH_API_KEY` after setting it in the host environment.
+   In PowerShell, set the environment variables using your preferred local secret manager, then launch the server from that session. `.env.example` lists the settings; the server also reads `JSEARCH_API_KEY` and `JOBTRACK_AUTO_ACCOUNT` from a local `.env` beside `server.py`. Set `JOBTRACK_AUTO_ACCOUNT=0` for this manual mode. The environment takes precedence. Other `.env` entries are ignored; the file is never executed. Keep this file private (`chmod 600 .env` on macOS/Linux). With Docker, pass both `-e JOBTRACK_AUTO_ACCOUNT=0` and `-e JSEARCH_API_KEY` after setting the key in the host environment.
 3. Restart any existing server, reload Find jobs, choose a source, and search a title and location. Indeed and LinkedIn use the provider's documented `via <publisher>` query, then retain only matching publishers/apply links returned by JSearch. Jobs not returned by the provider are not invented or substituted.
 
-Keep keys out of browser code, chat, screenshots, and GitHub. Source status exposes only whether a key is present. No API key is sent to Indeed or LinkedIn; the server sends it only to OpenWeb Ninja's fixed API endpoint.
+Keep keys out of browser code, chat, screenshots, and GitHub. Source status exposes readiness and account-setup status, never a key. No API key is sent to Indeed or LinkedIn; the server sends it only to OpenWeb Ninja's fixed API endpoint.
 
 Provider references: [Remotive API and reuse terms](https://github.com/remotive-com/remote-jobs-api), [JSearch endpoint, auth, and publisher queries](https://www.openwebninja.com/api/jsearch). The connected local instance has verified Indeed/LinkedIn access. A fresh clone still needs its own account/key configuration. AWS remains deferred.
 
@@ -98,14 +101,14 @@ GET parameters: `q`, `status`, `employment_type`, `salary_min`, `salary_max`, `s
 
 ```sh
 python3 -m unittest discover -s tests -v
-node --test tests/extraction.test.cjs
+node --test tests/*.test.cjs
 ```
 
 The committed CI workflow is configured to run these checks on pushes and pull requests. Local API, discovery, and extraction tests passed. Check the Actions tab for the current branch’s hosted run status. See `docs/VERIFICATION.md` for actual results and the limits of browser/extension/AWS verification.
 
 ## Files and architecture
 
-`web/` contains the browser interface, `server.py` serves static files and the REST API, `jobs.py` fetches and caches provider listings, SQLite persists records under `data/`, and `extension/` captures a reviewed draft. Browser requests and API share one origin. See `docs/ARCHITECTURE.md`, `docs/DEMO_SCRIPT.md` and `docs/AWS_DEPLOYMENT.md`.
+`web/` contains the browser interface, `server.py` serves static files and the REST API, `jobs.py` fetches and caches provider listings, `account_factory.py` rotates a disposable OpenWeb Ninja account for each run (free credits), SQLite persists records under `data/`, and `extension/` captures a reviewed draft. Browser requests and API share one origin. See `docs/ARCHITECTURE.md`, `docs/DEMO_SCRIPT.md` and `docs/AWS_DEPLOYMENT.md`.
 
 ## Docker option (locally built and smoke tested)
 

@@ -14,4 +14,4 @@ jobs:
         with:
           node-version: '22'
       - run: python -m unittest discover -s tests -v
-      - run: node --test tests/extraction.test.cjs
+      - run: node --test tests/*.test.cjs
