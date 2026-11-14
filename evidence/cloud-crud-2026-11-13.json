@@ -1,0 +1,15 @@
+{
+  "timestamp_utc": "2026-11-14T03:45:55.681610+00:00",
+  "instance_id": "i-0ef6f624c722a8b58",
+  "region": "us-east-1",
+  "flow": [
+    "create fictional record",
+    "update status to Interview",
+    "restart systemd jobtrack service",
+    "verify status persisted",
+    "delete disposable record",
+    "verify deletion"
+  ],
+  "passed": true,
+  "record_count_after": 5
+}

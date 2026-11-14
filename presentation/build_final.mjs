@@ -64,7 +64,7 @@ function note(slide, text) { slide.speakerNotes.text = text; }
   slide.background.fill = C.navy;
   shape(slide, "rect", 0, 0, 24, 720, C.teal);
   txt(slide, "JobTrack", 78, 125, 630, 120, 78, C.white, true);
-  txt(slide, evidence.aws_verified ? "A private cloud-hosted job application tracker" :
+  txt(slide, evidence.aws_verified ? "A cloud-hosted job application tracker" :
       "A private job application tracker · AWS deployment planned", 82, 259, 590, 120, 33, C.white);
   txt(slide, "CSE 4333 Cloud Computing · Group 42", 82, 515, 800, 36, 23, C.white, true);
   txt(slide, "Ahmad Salem · afs1009@mavs.uta.edu\nNoorAldeen Waleed · nxw3312@mavs.uta.edu", 82, 564, 930, 95, 20, C.white);
@@ -84,7 +84,7 @@ function note(slide, text) { slide.speakerNotes.text = text; }
   const slide = base("Why JobTrack exists");
   card(slide, 70, 188, 390, 149, "The problem", "Job seekers manage many applications and lose track of dates, status, and next steps.", C.pale);
   card(slide, 70, 361, 390, 150, "The users", "Students, recent graduates, and anyone applying to multiple jobs or internships.");
-  card(slide, 70, 534, 390, 118, "The outcome", "A searchable application pipeline in one place.", C.pale);
+  card(slide, 70, 534, 390, 118, "The outcome", "Discover leads and track applications in one place.", C.pale);
   shape(slide, "roundRect", 511, 184, 690, 475, C.white, C.line);
   await addImage(slide, path.join(root, "docs", "dashboard.png"), 532, 203, 648, 414,
     "JobTrack local dashboard with fictional demonstration records");
@@ -99,33 +99,33 @@ function note(slide, text) { slide.speakerNotes.text = text; }
     ["1  Add", "Open the app, or click the extension on a supported JobPosting page."],
     ["2  Review draft", "Check company, role, salary, type, date, URL, and notes before saving."],
     ["3  Track", "Move an application from Saved to Applied, Interview, Offer, or Rejected."],
-    ["4  Find and act", "Search, combine filters, sort, edit, or delete stale entries."],
+    ["4  Find and act", "Discover jobs; search, filter, sort, edit, or delete tracked entries."],
   ];
   data.forEach(([a,b], i) => card(slide, 70 + i * 300, 228, 274, 286, a, b, i % 2 ? C.white : C.pale));
-  txt(slide, "Supported capture: Schema.org JSON-LD JobPosting. Other pages require manual entry; JobTrack does not apply to employers.",
+  txt(slide, "Discover remote jobs with Remotive; optional JSearch covers more boards. The extension reads structured JobPosting data. JobTrack does not apply to employers.",
       89, 559, 1102, 80, 23, C.muted);
-  note(slide, "Use the bundled demo-job.html in a real installed Chrome extension check. Do not claim universal job-board support. See README.md.");
+  note(slide, "Remotive discovery and structured-posting capture are separate features. JSearch requires a user-owned API key. See README.md for provider limits.");
 }
 
 // 4 · Architecture, built from editable shapes
 {
-  const slide = base("Private AWS architecture");
+  const slide = base("Public HTTPS architecture");
   shape(slide, "roundRect", 62, 179, 412, 431, C.white, C.line);
-  txt(slide, "Authorized workstation", 85, 200, 363, 42, 26, C.navy, true);
+  txt(slide, "Browser and extension", 85, 200, 363, 42, 26, C.navy, true);
   card(slide, 87, 270, 162, 150, "Posting", "JSON-LD\nExtension", C.pale);
   txt(slide, "→", 252, 307, 53, 62, 43, C.teal, true);
   card(slide, 307, 270, 145, 150, "App", "Review\nCRUD", C.pale);
   txt(slide, "↓", 351, 432, 53, 58, 40, C.teal, true);
-  card(slide, 124, 485, 298, 120, "SSM tunnel", "Authorized port forward", C.gray);
+  card(slide, 124, 485, 298, 120, "HTTPS + password", "Public ports 80/443", C.gray);
   txt(slide, "→", 485, 387, 62, 62, 45, C.teal, true);
   shape(slide, "roundRect", 546, 179, 664, 431, C.pale, C.blue);
   txt(slide, "AWS account", 572, 200, 590, 42, 26, C.navy, true);
-  card(slide, 570, 280, 293, 217, "EC2 · Python API", "Static UI + JSON API\nLoopback port 8000\nNo security-group ingress", C.white);
+  card(slide, 570, 280, 293, 217, "EC2 · Nginx + API", "TLS + Basic auth\nApp on loopback: 8000\nSSH: trusted /32", C.white);
   txt(slide, "→", 869, 347, 61, 62, 45, C.teal, true);
   card(slide, 930, 280, 251, 217, "Encrypted EBS", "SQLite database\nPersists stop/start", C.white);
-  txt(slide, `${evidence.aws_verified ? "CloudFormation provisions" : "Planned: CloudFormation provisions"} · Private S3 holds source ZIP · existing Learner Lab profile grants S3 and SSM access`,
+  txt(slide, `${evidence.aws_verified ? "CloudFormation provisions" : "Planned: CloudFormation provisions"} · Private S3 holds source ZIP · sandbox myS3Role profile grants S3 access`,
       580, 531, 594, 64, 19, C.muted);
-  note(slide, "Architecture source: deploy/cloudformation.json and docs/ARCHITECTURE.md. Only call it deployed after stack, service, and health checks pass. EC2 has a public IPv4 for outbound bootstrapping but the security group allows no inbound web traffic.");
+  note(slide, "Architecture source: deploy/cloudformation-sandbox.json. Ports 80 and 443 are public; Nginx redirects HTTP to HTTPS and requires a shared demo password. SSH is restricted to one trusted client /32. The Python app remains on loopback.");
 }
 
 // 5 · Logic and data
@@ -135,7 +135,7 @@ function note(slide, text) { slide.speakerNotes.text = text; }
     "ID · company · title · location\nAnnual USD salary · employment type\nStatus · application date · URL · notes\nCreated and updated timestamps in UTC\nSQLite WAL; parameterized values", C.pale);
   const routes = [
     ["GET", "/api/health", "API and database check"],
-    ["GET", "/api/applications", "List, search, filter, sort"],
+    ["GET", "/api/jobs", "Discover job listings"],
     ["POST", "/api/applications", "Create record"],
     ["PUT", "/api/applications/{id}", "Replace editable fields"],
     ["DELETE", "/api/applications/{id}", "Delete record"],
@@ -160,25 +160,25 @@ function note(slide, text) { slide.speakerNotes.text = text; }
   shape(slide, "roundRect", 70, 186, 1127, 108, verified ? C.pale : C.gray, C.line);
   txt(slide, line, 99, 212, 1050, 55, 30, C.navy, true);
   card(slide, 70, 326, 350, 250, "Provision", verified ?
-    "CloudFormation creates EC2, encrypted EBS, and no-ingress security group; it attaches the existing lab profile." :
-    "Planned: CloudFormation would create EC2, encrypted EBS, and no-ingress security group.", C.white);
+    "CloudFormation creates EC2, encrypted EBS, public web ports, and SSH restricted to one /32; it attaches myS3Role." :
+    "Planned: CloudFormation would create EC2, encrypted EBS, and SSH restricted to one /32.", C.white);
   card(slide, 465, 326, 350, 250, "Connect", verified ?
-    "An authorized user starts a Systems Manager session and forwards local port 8000." :
-    "Planned: an authorized user would start a Systems Manager port forward.", C.pale);
+    "Open the public HTTPS address and enter the shared demo password. Nginx proxies to the loopback app." :
+    "Planned: an authorized user would start an SSH port forward.", C.pale);
   card(slide, 860, 326, 337, 250, "Verify", verified ?
-    "Systemd, /api/health, cloud-backed CRUD, refresh, and persistence were checked." :
+    "Public HTTPS: 401 anonymous, 200 authenticated. Health, CRUD, and persistence checked." :
     "Pending: check systemd, health, cloud-backed CRUD, refresh, and persistence.", C.white);
-  txt(slide, "The private demo has no public URL or user accounts. Backup is required before instance replacement or stack deletion.",
+  txt(slide, "The sandbox session is time-limited. The public demo has no individual user accounts. Back up data before instance or stack deletion.",
       83, 612, 1120, 58, 21, C.muted);
-  note(slide, "Cloud deployment must be verified with stack events, SSM Online, service status, health, and cloud-backed workflow. Do not present local-only results as AWS. AWS official docs: https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-sessions-start.html");
+  note(slide, "Cloud deployment evidence includes stack events, SSH access, service status, health, and cloud-backed workflow. Local-only results are separate.");
 }
 
 // 7 · Verification
 {
   const slide = base("Verification results");
   shape(slide, "roundRect", 70, 191, 326, 209, C.pale, C.line);
-  txt(slide, "11", 100, 227, 160, 85, 67, C.blue, true);
-  txt(slide, "API/database tests", 102, 321, 253, 42, 24, C.navy, true);
+  txt(slide, "23", 100, 227, 160, 85, 67, C.blue, true);
+  txt(slide, "Python tests", 102, 321, 253, 42, 24, C.navy, true);
   shape(slide, "roundRect", 429, 191, 326, 209, C.pale, C.line);
   txt(slide, "5", 459, 227, 160, 85, 67, C.blue, true);
   txt(slide, "extractor tests", 461, 321, 253, 42, 24, C.navy, true);
@@ -215,17 +215,17 @@ function note(slide, text) { slide.speakerNotes.text = text; }
       `${shownMetrics.requests_per_endpoint} sequential requests per endpoint · ${shownMetrics.database_records} fictional records · localhost`,
         75, 591, 1120, 60, 21, C.muted);
   }
-  note(slide, "Measurement source: evidence/performance-aws.json, produced by tools/benchmark.py. Includes client and SSM tunnel latency. It is a small single-user sample, not a load/scalability test. Do not invent or relabel results.");
+  note(slide, "Measurement source: evidence/performance-aws.json, produced by tools/benchmark.py. Includes client and SSH tunnel latency. It is a small single-user sample, not a load/scalability test.");
 }
 
 // 9 · Lessons and close
 {
   const slide = base("Lessons and next steps");
   card(slide, 70, 189, 348, 358, "What we fixed", "Browser QA revealed a Reset-button conflict. Final API review found database connections left open. Both were repaired and tested.", C.pale);
-  card(slide, 466, 189, 348, 358, "Current limits", "Single user, no login, no public URL, no automated backup, and structured-posting capture only. There is no machine-learning component.", C.white);
-  card(slide, 862, 189, 337, 358, "Future work", "Add authentication and user isolation, managed backup/database, HTTPS hosting, monitoring, and broader extraction.", C.pale);
+  card(slide, 466, 189, 348, 358, "Current limits", "Shared demo password, no per-user isolation or automated backup. The public address depends on the time-limited sandbox.", C.white);
+  card(slide, 862, 189, 337, 358, "Future work", "Add individual accounts, user isolation, managed backup/database, monitoring, and broader extraction.", C.pale);
   txt(slide, evidence.roles || "Team roles: awaiting confirmation before final export", 75, 578, 1120, 65, 22, C.navy, true);
-  note(slide, "Conclude with the observed final result and limitations. Poster and slide roles must reflect the team members' actual contributions. Do not submit until the user authorizes; current instruction is to leave files ready.");
+  note(slide, "Conclude with the observed final result and limitations. The pair are listed as equal co-developers at the user's direction.");
 }
 
 const buildDir = path.join(root, "work", "presentation-build");
