@@ -1,0 +1,16 @@
+{
+  "checked_at_utc": "2026-11-14T04:12:46.464169+00:00",
+  "public_url": "https://100-58-234-86.sslip.io/",
+  "anonymous_health_status": 401,
+  "authenticated_health_status": 200,
+  "database": "sqlite",
+  "public_create_status": 201,
+  "public_delete_status": 200,
+  "demo_records_after": 5,
+  "http_redirect_status": 301,
+  "tls_certificate_subject": "100-58-234-86.sslip.io",
+  "tls_certificate_expires_utc": "2027-02-12T03:06:35Z",
+  "stack_status": "UPDATE_COMPLETE",
+  "authentication": "Nginx shared HTTP Basic password over HTTPS",
+  "secrets_in_evidence": false
+}

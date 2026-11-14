@@ -64,7 +64,7 @@ function note(slide, text) { slide.speakerNotes.text = text; }
   slide.background.fill = C.navy;
   shape(slide, "rect", 0, 0, 24, 720, C.teal);
   txt(slide, "JobTrack", 78, 125, 630, 120, 78, C.white, true);
-  txt(slide, evidence.aws_verified ? "A private cloud-hosted job application tracker" :
+  txt(slide, evidence.aws_verified ? "A cloud-hosted job application tracker" :
       "A private job application tracker · AWS deployment planned", 82, 259, 590, 120, 33, C.white);
   txt(slide, "CSE 4333 Cloud Computing · Group 42", 82, 515, 800, 36, 23, C.white, true);
   txt(slide, "Ahmad Salem · afs1009@mavs.uta.edu\nNoorAldeen Waleed · nxw3312@mavs.uta.edu", 82, 564, 930, 95, 20, C.white);
@@ -109,23 +109,23 @@ function note(slide, text) { slide.speakerNotes.text = text; }
 
 // 4 · Architecture, built from editable shapes
 {
-  const slide = base("Private AWS architecture");
+  const slide = base("Public HTTPS architecture");
   shape(slide, "roundRect", 62, 179, 412, 431, C.white, C.line);
-  txt(slide, "Authorized workstation", 85, 200, 363, 42, 26, C.navy, true);
+  txt(slide, "Browser and extension", 85, 200, 363, 42, 26, C.navy, true);
   card(slide, 87, 270, 162, 150, "Posting", "JSON-LD\nExtension", C.pale);
   txt(slide, "→", 252, 307, 53, 62, 43, C.teal, true);
   card(slide, 307, 270, 145, 150, "App", "Review\nCRUD", C.pale);
   txt(slide, "↓", 351, 432, 53, 58, 40, C.teal, true);
-  card(slide, 124, 485, 298, 120, "SSH tunnel", "Trusted client /32", C.gray);
+  card(slide, 124, 485, 298, 120, "HTTPS + password", "Public ports 80/443", C.gray);
   txt(slide, "→", 485, 387, 62, 62, 45, C.teal, true);
   shape(slide, "roundRect", 546, 179, 664, 431, C.pale, C.blue);
   txt(slide, "AWS account", 572, 200, 590, 42, 26, C.navy, true);
-  card(slide, 570, 280, 293, 217, "EC2 · Python API", "Static UI + JSON API\nLoopback port 8000\nSSH from one /32 only", C.white);
+  card(slide, 570, 280, 293, 217, "EC2 · Nginx + API", "TLS + Basic auth\nApp on loopback: 8000\nSSH: trusted /32", C.white);
   txt(slide, "→", 869, 347, 61, 62, 45, C.teal, true);
   card(slide, 930, 280, 251, 217, "Encrypted EBS", "SQLite database\nPersists stop/start", C.white);
   txt(slide, `${evidence.aws_verified ? "CloudFormation provisions" : "Planned: CloudFormation provisions"} · Private S3 holds source ZIP · sandbox myS3Role profile grants S3 access`,
       580, 531, 594, 64, 19, C.muted);
-  note(slide, "Architecture source: deploy/cloudformation-sandbox.json. EC2 has a public IPv4 for bootstrap and SSH restricted to one trusted client /32. The web app listens on loopback only.");
+  note(slide, "Architecture source: deploy/cloudformation-sandbox.json. Ports 80 and 443 are public; Nginx redirects HTTP to HTTPS and requires a shared demo password. SSH is restricted to one trusted client /32. The Python app remains on loopback.");
 }
 
 // 5 · Logic and data
@@ -160,15 +160,15 @@ function note(slide, text) { slide.speakerNotes.text = text; }
   shape(slide, "roundRect", 70, 186, 1127, 108, verified ? C.pale : C.gray, C.line);
   txt(slide, line, 99, 212, 1050, 55, 30, C.navy, true);
   card(slide, 70, 326, 350, 250, "Provision", verified ?
-    "CloudFormation creates EC2, encrypted EBS, and SSH restricted to one /32; it attaches myS3Role." :
+    "CloudFormation creates EC2, encrypted EBS, public web ports, and SSH restricted to one /32; it attaches myS3Role." :
     "Planned: CloudFormation would create EC2, encrypted EBS, and SSH restricted to one /32.", C.white);
   card(slide, 465, 326, 350, 250, "Connect", verified ?
-    "An authorized user starts an SSH tunnel to forward local port 8000." :
+    "Open the public HTTPS address and enter the shared demo password. Nginx proxies to the loopback app." :
     "Planned: an authorized user would start an SSH port forward.", C.pale);
   card(slide, 860, 326, 337, 250, "Verify", verified ?
-    "Systemd, /api/health, cloud-backed CRUD, refresh, and persistence were checked." :
+    "Public HTTPS: 401 anonymous, 200 authenticated. Health, CRUD, and persistence checked." :
     "Pending: check systemd, health, cloud-backed CRUD, refresh, and persistence.", C.white);
-  txt(slide, "The sandbox session is time-limited. The private demo has no public URL or user accounts. Back up data before instance or stack deletion.",
+  txt(slide, "The sandbox session is time-limited. The public demo has no individual user accounts. Back up data before instance or stack deletion.",
       83, 612, 1120, 58, 21, C.muted);
   note(slide, "Cloud deployment evidence includes stack events, SSH access, service status, health, and cloud-backed workflow. Local-only results are separate.");
 }
@@ -222,8 +222,8 @@ function note(slide, text) { slide.speakerNotes.text = text; }
 {
   const slide = base("Lessons and next steps");
   card(slide, 70, 189, 348, 358, "What we fixed", "Browser QA revealed a Reset-button conflict. Final API review found database connections left open. Both were repaired and tested.", C.pale);
-  card(slide, 466, 189, 348, 358, "Current limits", "Single user, no login or public URL, no automated backup. Job discovery uses Remotive and optional JSearch; no machine learning.", C.white);
-  card(slide, 862, 189, 337, 358, "Future work", "Add authentication and user isolation, managed backup/database, HTTPS hosting, monitoring, and broader extraction.", C.pale);
+  card(slide, 466, 189, 348, 358, "Current limits", "Shared demo password, no per-user isolation or automated backup. The public address depends on the time-limited sandbox.", C.white);
+  card(slide, 862, 189, 337, 358, "Future work", "Add individual accounts, user isolation, managed backup/database, monitoring, and broader extraction.", C.pale);
   txt(slide, evidence.roles || "Team roles: awaiting confirmation before final export", 75, 578, 1120, 65, 22, C.navy, true);
   note(slide, "Conclude with the observed final result and limitations. The pair are listed as equal co-developers at the user's direction.");
 }

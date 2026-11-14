@@ -12,13 +12,13 @@ One `applications` table: id, company, title, location, salary (nullable annual 
 
 ## Verified AWS Sandbox deployment — November 13
 
-`deploy/cloudformation-sandbox.json` created an Amazon Linux 2023 `t3.micro` EC2 instance with Python 3.11 and SQLite on a 12 GiB encrypted gp2 EBS root volume. CloudFormation also created a security group. It admits SSH only from the deployment client's single `/32` IPv4; port 8000 is not open to the Internet. The app listens on EC2 loopback port 8000 and is reached through an SSH local port forward. The existing `myS3Role` instance profile lets EC2 fetch its source ZIP from a private S3 bucket. Cloud health, CRUD, service-restart persistence, Remotive discovery, and client-to-EC2 latency were verified. See `docs/FINAL_STATUS_2026-11-13.md` and `evidence/` for results.
+`deploy/cloudformation-sandbox.json` created an Amazon Linux 2023 `t3.micro` EC2 instance with Python 3.11 and SQLite on a 12 GiB encrypted gp2 EBS root volume. CloudFormation also created a security group. It allows public TCP 80/443 and limits SSH to the deployment client's single `/32` IPv4. Nginx redirects HTTP to HTTPS, enforces a shared demo password, and proxies to the Python app on EC2 loopback port 8000. The public address is `https://100-58-234-86.sslip.io/`. The existing `myS3Role` instance profile lets EC2 fetch its source ZIP from a private S3 bucket. Cloud health, CRUD, service-restart persistence, Remotive discovery, public HTTPS access, and client-to-EC2 tunnel latency were verified. See `docs/FINAL_STATUS_2026-11-13.md` and `evidence/` for results.
 
 The original `deploy/cloudformation.json` remains a separate **Learner Lab** design with `LabInstanceProfile` and Systems Manager access. It was not the deployed configuration. The Sandbox session is time-limited, and the root EBS volume is deleted when the instance terminates. Back up before deletion or replacement.
 
 ## Limits
 
-The built-in Python server is suitable for a local/private class demonstration. A public deployment requires authentication, per-user authorization, TLS and a hardened server. SQLite is not shared across replicas. No email automation, employer submission, job-board login integration, OAuth, telemetry, or background crawler is implemented.
+The public class demo uses TLS and shared HTTP Basic authentication at Nginx. It has no individual accounts or per-user authorization, so all authorized visitors share the same fictional records. It is not suitable for real applicant data or durable production hosting. SQLite is not shared across replicas. No email automation, employer submission, job-board login integration, OAuth, telemetry, or background crawler is implemented.
 
 
 ## Job discovery extension (November 12, 2026)

@@ -1,8 +1,10 @@
 # JobTrack
 
-For the current Group 42 results and final files, see [`docs/FINAL_STATUS_2026-11-13.md`](docs/FINAL_STATUS_2026-11-13.md). The Canvas and Google Form submissions are pending. Older handoff documents describe the November 5–6 plan.
+For the current Group 42 results and final files, see [`docs/FINAL_STATUS_2026-11-13.md`](docs/FINAL_STATUS_2026-11-13.md). The poster and slides were submitted November 13. Older handoff documents describe the November 5–6 plan.
 
-A runnable single-user job application tracker. The dashboard, API, database, job discovery, and structured-posting capture flow were developed for a private class demonstration. A time-limited AWS Academy Sandbox deployment was verified on November 13; see the final status and evidence files for its exact scope.
+A runnable single-user job application tracker. The dashboard, API, database, job discovery, and structured-posting capture flow were developed for a class demonstration. A time-limited public HTTPS AWS Academy Sandbox deployment was verified on November 13; see the final status and evidence files for its exact scope. It uses a shared demo password; individual accounts and data isolation are not implemented.
+
+Public demo: **https://100-58-234-86.sslip.io/**. The password is stored only in ignored `work/public-demo-login.txt` on the deployment laptop. Use fictional records only. The address depends on the AWS Sandbox session and EC2 public IP.
 
 ## Run in two steps
 

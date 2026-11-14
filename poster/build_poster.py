@@ -100,7 +100,7 @@ def summary_panel(canvas, top, evidence):
         "The dashboard, Python API, and SQLite support tracking and job discovery. Remotive works without a key; Indeed and LinkedIn use optional JSearch. A Chrome extension reads structured postings.",
     ]
     if evidence.get("aws_verified"):
-        paragraphs.append("Verified private AWS sandbox deployment: EC2, encrypted EBS, private S3 source delivery, IAM, CloudFormation, and a restricted SSH tunnel.")
+        paragraphs.append("Verified public HTTPS AWS sandbox demo: Nginx with a shared password proxies to EC2's loopback app. CloudFormation provisions EC2 and encrypted EBS; private S3 supplies source.")
     else:
         paragraphs.append("AWS deployment is still pending verification in this draft. Final output must state actual cloud results.")
     return panel(canvas, x, top, COL, "Project summary", paragraphs, min_height=1130, fill=PALE)
@@ -192,7 +192,7 @@ def build(output, evidence, metrics):
     c.drawString(MARGIN, PAGE_H - 161, "JobTrack")
     c.setFont("Arial", 43)
     c.drawString(MARGIN, PAGE_H - 230,
-                 "A private cloud-hosted job application tracker" if evidence.get("aws_verified")
+                 "A cloud-hosted job application tracker" if evidence.get("aws_verified")
                  else "A private job application tracker · AWS deployment planned")
     c.setFont("Arial", 29)
     c.drawString(MARGIN, PAGE_H - 298, "CSE 4333 Cloud Computing · Group 42")
@@ -214,28 +214,28 @@ def build(output, evidence, metrics):
         "Remotive and optional JSearch provide job discovery. The extension reads Schema.org JobPosting JSON-LD. JobTrack does not apply to employers.",
     ]) - 28
     y1 = panel(c, x1, y1, COL, "Conclusion", [
-        "JobTrack puts discovered opportunities and application progress in one searchable place. It is a working private single-user demonstration.",
-        "AWS deployment and performance are described using measured results; public multi-user hosting remains future work." if evidence.get("aws_verified") else "Cloud deployment and measurement remain unverified; the local demonstration is functional.",
+        "JobTrack puts discovered opportunities and application progress in one searchable place. It is a working password-protected class demonstration.",
+        "AWS deployment and performance use measured results. Per-user accounts and durable public hosting remain future work." if evidence.get("aws_verified") else "Cloud deployment and measurement remain unverified; the local demonstration is functional.",
     ])
 
     y2 = panel(c, x2, lower_top, COL, "Application logic", [
         "The responsive dashboard calls same-origin JSON endpoints. The Python API validates fields and stores UTC timestamps in SQLite.",
         "Endpoints cover health, application CRUD, /api/jobs discovery, /api/job-sources status, and saving a listing. Search and filters combine; sort keys are allowlisted.",
     ]) - 28
-    cloud_intro = ("CloudFormation provisions EC2, encrypted EBS, and a security group allowing SSH only from one trusted /32. The sandbox's myS3Role profile pulls source from private S3."
+    cloud_intro = ("CloudFormation creates EC2, encrypted EBS, and public web rules. SSH is /32-limited; myS3Role reads the private S3 source ZIP."
                    if evidence.get("aws_verified") else
                    "Planned cloud design: CloudFormation would provision EC2, encrypted EBS, and SSH restricted to one /32, using the sandbox's myS3Role profile for private S3.")
     y2 = panel(c, x2, y2, COL, "Cloud services", [
         cloud_intro,
-        "An SSH tunnel would let an authorized user reach the loopback-only app without opening a public web port." if not evidence.get("aws_verified") else "An SSH tunnel lets an authorized user reach the loopback-only app without opening a public web port.",
+        "An SSH tunnel would let an authorized user reach the loopback-only app without opening a public web port." if not evidence.get("aws_verified") else "Nginx serves HTTPS with a shared demo password, then proxies to the loopback Python app.",
     ]) - 28
     y2 = panel(c, x2, y2, COL, "Alternatives considered", [
-        "A public HTTPS app needs login and per-user authorization. RDS or DynamoDB would improve managed storage; serverless hosting could scale differently.",
-        "The one-instance SQLite design is appropriate for a small private class demo, but it has no high availability or automatic backup.",
+        "Per-user accounts would isolate applicants. RDS or DynamoDB would improve managed storage; serverless hosting could scale differently.",
+        "The one-instance SQLite design is appropriate for a small class demo, but it has no high availability or automatic backup.",
     ]) - 28
     y2 = panel(c, x2, y2, COL, "Challenges and lessons", [
         "Browser QA exposed a Reset-button conflict. Final API review exposed unclosed SQLite connections. Both were fixed and regression-tested.",
-        "A restricted SSH tunnel keeps the web service private. The sandbox session is time-limited; the EBS root volume needs a backup before termination.",
+        "Public access required TLS and a password at the reverse proxy. The sandbox session is time-limited; the EBS root volume needs backup before termination.",
     ]) - 28
     roles = evidence.get("roles") or "Team roles await confirmation. The proposal credits NoorAldeen with the idea and Ahmad with proposal review; final work should be described accurately."
     y2 = panel(c, x2, y2, COL, "Team contributions", [roles])
@@ -243,13 +243,13 @@ def build(output, evidence, metrics):
     y3 = metrics_panel(c, x3, lower_top, evidence, metrics) - 28
     y3 = panel(c, x3, y3, COL, "Verification", [
         "23 Python tests and 5 extractor tests pass. The browser checked draft review, save, edit, refresh, filters, sorting, deletion, and job discovery.",
-        "Cloud CRUD, restart persistence, and Remotive discovery passed through the SSH tunnel. The installed extension toolbar was not tested.",
+        "Cloud CRUD, restart persistence, and Remotive discovery passed. Public HTTPS returned 401 without a password and 200 with one. The installed extension toolbar was not tested.",
     ]) - 28
     y3 = panel(c, x3, y3, COL, "Machine learning", [
         "Not applicable. JobTrack uses rules and a relational database; it has no trained model.",
     ]) - 28
     y3 = panel(c, x3, y3, COL, "Future work", [
-        "Add authentication and user isolation before public access. Move to managed backup/database, add HTTPS and monitoring, and broaden posting extraction.",
+        "Add individual accounts and user isolation before real applicant data. Move to managed backup/database, add monitoring, and broaden posting extraction.",
     ])
 
     footer_y = 88

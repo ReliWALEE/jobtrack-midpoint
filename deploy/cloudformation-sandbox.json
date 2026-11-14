@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "JobTrack private app in the AWS Academy Cloud Architecting Sandbox; SSH tunnel from one trusted client IP.",
+  "Description": "JobTrack HTTPS demo in the AWS Academy Cloud Architecting Sandbox.",
   "Parameters": {
     "VpcId": { "Type": "AWS::EC2::VPC::Id" },
     "SubnetId": { "Type": "AWS::EC2::Subnet::Id" },
@@ -17,7 +17,11 @@
       "Properties": {
         "GroupDescription": "SSH only from one trusted client; app remains on loopback",
         "VpcId": { "Ref": "VpcId" },
-        "SecurityGroupIngress": [{ "IpProtocol": "tcp", "FromPort": 22, "ToPort": 22, "CidrIp": { "Ref": "SshCidr" } }],
+        "SecurityGroupIngress": [
+          { "IpProtocol": "tcp", "FromPort": 22, "ToPort": 22, "CidrIp": { "Ref": "SshCidr" } },
+          { "IpProtocol": "tcp", "FromPort": 80, "ToPort": 80, "CidrIp": "0.0.0.0/0" },
+          { "IpProtocol": "tcp", "FromPort": 443, "ToPort": 443, "CidrIp": "0.0.0.0/0" }
+        ],
         "SecurityGroupEgress": [{ "IpProtocol": "-1", "CidrIp": "0.0.0.0/0" }]
       }
     },
@@ -46,6 +50,6 @@
   "Outputs": {
     "InstanceId": { "Value": { "Ref": "Instance" } },
     "PublicIp": { "Value": { "Fn::GetAtt": ["Instance", "PublicIp"] } },
-    "Access": { "Value": "SSH local port 8000 to EC2 loopback port 8000. Only the trusted /32 has SSH access." }
+    "Access": { "Value": "HTTPS on the public IP's sslip.io hostname, protected by HTTP Basic authentication; SSH restricted to the trusted /32." }
   }
 }
