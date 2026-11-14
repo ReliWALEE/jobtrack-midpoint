@@ -1,0 +1,34 @@
+{
+  "verified_at_utc": "2026-11-14T03:52:07.443827+00:00",
+  "course_environment": "AWS Academy Cloud Architecting Sandbox",
+  "region": "us-east-1",
+  "cloudformation_stack": "jobtrack-final",
+  "stack_status": "CREATE_COMPLETE",
+  "instance_id": "i-0ef6f624c722a8b58",
+  "instance_type": "t3.micro",
+  "instance_profile": "myS3Role",
+  "root_ebs": {
+    "encrypted": true,
+    "size_gib": 12,
+    "type": "gp2"
+  },
+  "source_bucket_private": true,
+  "source_bucket_encryption": "AES256",
+  "source_zip_sha256": "e3526a1aa59bb80f5d84be9a4d38a19d1a4db0ca6041ccbec492778f1266f62b",
+  "security_group": {
+    "ingress": [
+      "TCP 22 from one trusted client /32 (address redacted)"
+    ],
+    "web_port_8000_inbound": false
+  },
+  "access": "SSH local port forward to EC2 loopback port 8000",
+  "health": {
+    "status": "ok",
+    "database": "sqlite"
+  },
+  "cloud_crud_restart_persistence": true,
+  "remotive_discovery_result_count": 16,
+  "benchmark_file": "evidence/performance-aws.json",
+  "source_commit": "a59f8d0",
+  "limitation": "Sandbox lab sessions last three hours; future classroom demo requires rechecking or restarting the session. No public URL or multi-user authentication."
+}

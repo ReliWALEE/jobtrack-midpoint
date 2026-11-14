@@ -1,0 +1,51 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "JobTrack private app in the AWS Academy Cloud Architecting Sandbox; SSH tunnel from one trusted client IP.",
+  "Parameters": {
+    "VpcId": { "Type": "AWS::EC2::VPC::Id" },
+    "SubnetId": { "Type": "AWS::EC2::Subnet::Id" },
+    "SourceBucket": { "Type": "String" },
+    "SourceKey": { "Type": "String", "Default": "jobtrack/JobTrack-source.zip" },
+    "KeyName": { "Type": "AWS::EC2::KeyPair::KeyName" },
+    "SshCidr": { "Type": "String", "Description": "Single trusted client IPv4 /32 for SSH tunnel" },
+    "AmiId": { "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>", "Default": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64" },
+    "InstanceType": { "Type": "String", "Default": "t3.micro", "AllowedValues": ["t3.micro", "t3.small"] }
+  },
+  "Resources": {
+    "SecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "SSH only from one trusted client; app remains on loopback",
+        "VpcId": { "Ref": "VpcId" },
+        "SecurityGroupIngress": [{ "IpProtocol": "tcp", "FromPort": 22, "ToPort": 22, "CidrIp": { "Ref": "SshCidr" } }],
+        "SecurityGroupEgress": [{ "IpProtocol": "-1", "CidrIp": "0.0.0.0/0" }]
+      }
+    },
+    "Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": { "Ref": "AmiId" },
+        "InstanceType": { "Ref": "InstanceType" },
+        "IamInstanceProfile": "myS3Role",
+        "KeyName": { "Ref": "KeyName" },
+        "MetadataOptions": { "HttpTokens": "required" },
+        "NetworkInterfaces": [{
+          "DeviceIndex": "0", "AssociatePublicIpAddress": true,
+          "SubnetId": { "Ref": "SubnetId" },
+          "GroupSet": [{ "Ref": "SecurityGroup" }]
+        }],
+        "BlockDeviceMappings": [{
+          "DeviceName": "/dev/xvda",
+          "Ebs": { "VolumeSize": 12, "VolumeType": "gp2", "Encrypted": true, "DeleteOnTermination": true }
+        }],
+        "UserData": { "Fn::Base64": { "Fn::Sub": "#!/bin/bash\nset -euxo pipefail\ndnf install -y python3.11 unzip\nmkdir -p /opt/jobtrack /var/lib/jobtrack\naws s3 cp s3://${SourceBucket}/${SourceKey} /tmp/jobtrack.zip --region ${AWS::Region}\nunzip /tmp/jobtrack.zip -d /opt/jobtrack\nuseradd --system jobtrack\nchown jobtrack:jobtrack /var/lib/jobtrack\ncat > /etc/systemd/system/jobtrack.service <<'UNIT'\n[Unit]\nDescription=JobTrack\nAfter=network.target\n[Service]\nUser=jobtrack\nWorkingDirectory=/opt/jobtrack/JobTrack\nEnvironment=JOBTRACK_DB=/var/lib/jobtrack/jobtrack.sqlite3\nExecStart=/usr/bin/python3.11 server.py --host 127.0.0.1 --port 8000\nRestart=on-failure\nNoNewPrivileges=true\nProtectSystem=strict\nReadWritePaths=/var/lib/jobtrack\n[Install]\nWantedBy=multi-user.target\nUNIT\nsystemctl daemon-reload\nsystemctl enable --now jobtrack\n" } },
+        "Tags": [{ "Key": "Name", "Value": "JobTrack-final" }]
+      }
+    }
+  },
+  "Outputs": {
+    "InstanceId": { "Value": { "Ref": "Instance" } },
+    "PublicIp": { "Value": { "Fn::GetAtt": ["Instance", "PublicIp"] } },
+    "Access": { "Value": "SSH local port 8000 to EC2 loopback port 8000. Only the trusted /32 has SSH access." }
+  }
+}

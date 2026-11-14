@@ -1,8 +1,8 @@
 # JobTrack
 
-For the Group 42 final-project requirements and verification status, see [`docs/FINAL_TEAM_HANDOFF.md`](docs/FINAL_TEAM_HANDOFF.md) and [`docs/VERIFICATION.md`](docs/VERIFICATION.md). The user has directed that the final poster and slides be prepared but **not submitted**.
+For the current Group 42 results and final files, see [`docs/FINAL_STATUS_2026-11-13.md`](docs/FINAL_STATUS_2026-11-13.md). The Canvas and Google Form submissions are pending. Older handoff documents describe the November 5–6 plan.
 
-A runnable single-user job application tracker. The dashboard, API, database, and structured-posting capture flow were developed for a private class demonstration. Cloud deployment must be verified before it is described as live.
+A runnable single-user job application tracker. The dashboard, API, database, job discovery, and structured-posting capture flow were developed for a private class demonstration. A time-limited AWS Academy Sandbox deployment was verified on November 13; see the final status and evidence files for its exact scope.
 
 ## Run in two steps
 
@@ -115,11 +115,11 @@ docker run --rm -p 127.0.0.1:8000:8000 -v jobtrack-data:/data jobtrack
 ```
 
 The named volume preserves data. Never remove the volume unless you intend to erase it.
-The image was built locally on November 6; its health, list, and dashboard endpoints returned HTTP 200 on a temporary container. This is separate from the intended AWS Learner Lab deployment.
+The image was built locally on November 6; its health, list, and dashboard endpoints returned HTTP 200 on a temporary container. The November 13 AWS deployment uses a direct Amazon Linux 2023 systemd service instead of Docker.
 
 ## Presentation
 
-`presentation/JobTrack-Midpoint.pptx` is the archived midpoint deck. `presentation/build_final.mjs` builds the editable final deck after verified cloud evidence is recorded. The midpoint recording guide is in `docs/DEMO_SCRIPT.md`.
+`presentation/JobTrack-Midpoint.pptx` is the archived midpoint deck. `presentation/build_final.mjs` builds the editable final deck at `deliverables/Group42-JobTrack.pptx` from verified evidence. The final poster is at `deliverables/JobTrack-poster-final.pdf`. The midpoint recording guide is historical.
 
 ## AWS source package
 
@@ -129,7 +129,7 @@ Create the source archive expected by the CloudFormation instructions:
 python3 deploy/package_source.py
 ```
 
-It writes `work/JobTrack-source.zip` with a top-level `JobTrack/` directory and excludes runtime data. See `docs/AWS_DEPLOYMENT.md` for account authorization, upload, validation, cost and cleanup steps. The available course Sandbox was inspected, but the user paused deployment there; no AWS deployment has been verified yet.
+It writes `work/JobTrack-source.zip` with a top-level `JobTrack/` directory and excludes runtime data. The verified Sandbox deployment uses `deploy/cloudformation-sandbox.json`; see [`docs/FINAL_STATUS_2026-11-13.md`](docs/FINAL_STATUS_2026-11-13.md) for the observed results. `docs/AWS_DEPLOYMENT.md` and `deploy/cloudformation.json` retain the original Learner Lab/SSM design as a separate option.
 
 ## GitHub handoff
 

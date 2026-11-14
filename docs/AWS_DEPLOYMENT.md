@@ -1,4 +1,6 @@
-# AWS deployment preparation
+# Original Learner Lab deployment plan (historical)
+
+**Current November 13 deployment:** The AWS Academy Cloud Architecting Sandbox stack `jobtrack-final` was verified using `deploy/cloudformation-sandbox.json`, a restricted SSH tunnel, private S3, `myS3Role`, EC2, and encrypted EBS. See [`FINAL_STATUS_2026-11-13.md`](FINAL_STATUS_2026-11-13.md) for the actual configuration, tests, results, and session limit. The instructions below describe the separate Learner Lab/Systems Manager design prepared on November 6; they are not the configuration deployed on November 13.
 
 Status as of November 6, 2026: configuration prepared and checked locally; AWS service-side template syntax validation passed in the course Sandbox. No JobTrack deployment, bootstrap execution, cloud health check, or public URL has been verified. AWS CLI and the Session Manager plugin are installed locally, but the intended Learner Lab account/profile remains unverified. This is a private single-user class demo, not a production service.
 
