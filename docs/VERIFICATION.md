@@ -1,5 +1,7 @@
 # Verification record
 
+**Current verification:** See [`FINAL_STATUS_2026-11-13.md`](FINAL_STATUS_2026-11-13.md) and `evidence/` for the November 13 sandbox deployment, cloud CRUD/restart test, 50-request-per-endpoint latency measurements, and 23 Python plus five JavaScript tests. The older November 6 statements below are a historical baseline.
+
 Original midpoint verification date: October 16, 2026, America/Chicago. Final-project checks below were updated November 6, 2026. Claims about AWS and the installed extension remain pending until they are actually observed.
 
 ## November 6 final-project preparation

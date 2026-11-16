@@ -1,5 +1,7 @@
 # JobTrack — complete final-project handoff
 
+**Current status:** The November 13 sandbox deployment, benchmark, poster PDF, and presentation PPTX are described in [`FINAL_STATUS_2026-11-13.md`](FINAL_STATUS_2026-11-13.md). Course submissions are pending. The November 5–6 plan below is retained as history and its statements that AWS or final files are missing no longer describe the current state.
+
 **Read this first.** This guide was prepared November 5, 2026 for CSE 4333, **Group 42: Ahmad Salem and NoorAldeen Waleed**. It describes the included source as it actually stands, the final Canvas requirements, and the work needed to finish. It is a work plan, not evidence that the cloud app or final submissions are complete. Use fictional job records for testing. Keep AWS credentials, access keys, private emails, and real applicants' data out of screenshots and GitHub.
 
 **November 6 update:** Ahmad directed that **nothing be turned in** and **nothing be deployed in the accessible Cloud Architecting Sandbox now**. Any submission steps below describe the eventual course process only. The current CloudFormation template targets a separate Learner Lab with `LabInstanceProfile`; that profile was absent in the inspected Sandbox. Follow the updated [`AWS_DEPLOYMENT.md`](AWS_DEPLOYMENT.md) when the deployment account is settled. The original checklist below is retained as project context.

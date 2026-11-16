@@ -1,4 +1,4 @@
-"""Measure read-only JobTrack HTTP latency through a local or SSM-forwarded URL.
+"""Measure read-only JobTrack HTTP latency through a local or forwarded URL.
 
 This creates no application records and sends no source data to another service.
 Use fictional demo data when measuring the deployed instance.
@@ -69,7 +69,7 @@ def main():
         "database_records": len(records),
         "requests_per_endpoint": args.requests,
         "warmup_per_endpoint": args.warmup,
-        "method": "sequential GET requests from client to URL; includes SSM tunnel when used",
+        "method": "sequential GET requests from client to URL; includes SSH tunnel when used",
         "results": results,
     }
     rendered = json.dumps(report, indent=2) + "\n"

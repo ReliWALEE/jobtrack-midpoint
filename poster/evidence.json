@@ -1,6 +1,19 @@
 {
-  "aws_verified": false,
+  "aws_verified": true,
   "extension_verified": false,
   "browser_import_verified": true,
-  "roles": "Ahmad Salem and NoorAldeen Waleed — equal co-developers. Both share project design, implementation, testing, cloud integration, documentation, and presentation."
+  "roles": "Ahmad Salem and NoorAldeen Waleed \u2014 equal co-developers. NoorAldeen built the core tracker and job-discovery features. Ahmad handled final cloud deployment, testing, documentation, poster, and slides. Both shaped the project design.",
+  "region": "us-east-1",
+  "instance_type": "t3.micro",
+  "instance_id": "i-0ef6f624c722a8b58",
+  "stack_name": "jobtrack-final",
+  "deployment_account": "AWS Academy Cloud Architecting Sandbox",
+  "access": "Public HTTPS via Nginx with a shared HTTP Basic demo password; app remains on EC2 loopback; SSH restricted to deployment client /32",
+  "public_url": "https://100-58-234-86.sslip.io/",
+  "public_https_verified": true,
+  "cloud_crud_verified": true,
+  "cloud_restart_persistence_verified": true,
+  "remotive_cloud_verified": true,
+  "remotive_cloud_count": 16,
+  "source_commit": "a59f8d0"
 }

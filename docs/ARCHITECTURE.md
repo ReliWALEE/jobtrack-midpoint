@@ -10,13 +10,15 @@ The dashboard uses fetch with same-origin JSON REST requests. A Python Threading
 
 One `applications` table: id, company, title, location, salary (nullable annual USD integer), employment_type, status, applied_date, url, notes, created_at, updated_at. There is no users table or tenancy model. All users of one server would share the same records.
 
-## AWS target
+## Verified AWS Sandbox deployment — November 13
 
-An Amazon Linux 2023 EC2 instance hosts the same server with Python 3.11 and an SQLite file. The AWS Academy Learner Lab template attaches its existing `LabInstanceProfile`, which must permit source ZIP reads and SSM management; this lab profile has broader permissions than a production-specific role. The security group admits no inbound traffic. A user with authorized AWS access forwards local port 8000 to the instance. The encrypted EBS root disk persists through stop/start, but terminates with the instance. CloudFormation configuration is prepared and has not yet been verified in AWS.
+`deploy/cloudformation-sandbox.json` created an Amazon Linux 2023 `t3.micro` EC2 instance with Python 3.11 and SQLite on a 12 GiB encrypted gp2 EBS root volume. CloudFormation also created a security group. It allows public TCP 80/443 and limits SSH to the deployment client's single `/32` IPv4. Nginx redirects HTTP to HTTPS, enforces a shared demo password, and proxies to the Python app on EC2 loopback port 8000. The public address is `https://100-58-234-86.sslip.io/`. The existing `myS3Role` instance profile lets EC2 fetch its source ZIP from a private S3 bucket. Cloud health, CRUD, service-restart persistence, Remotive discovery, public HTTPS access, and client-to-EC2 tunnel latency were verified. See `docs/FINAL_STATUS_2026-11-13.md` and `evidence/` for results.
+
+The original `deploy/cloudformation.json` remains a separate **Learner Lab** design with `LabInstanceProfile` and Systems Manager access. It was not the deployed configuration. The Sandbox session is time-limited, and the root EBS volume is deleted when the instance terminates. Back up before deletion or replacement.
 
 ## Limits
 
-The built-in Python server is suitable for a local/private class demonstration. A public deployment requires authentication, per-user authorization, TLS and a hardened server. SQLite is not shared across replicas. No email automation, employer submission, job-board login integration, OAuth, telemetry, or background crawler is implemented.
+The public class demo uses TLS and shared HTTP Basic authentication at Nginx. It has no individual accounts or per-user authorization, so all authorized visitors share the same fictional records. It is not suitable for real applicant data or durable production hosting. SQLite is not shared across replicas. No email automation, employer submission, job-board login integration, OAuth, telemetry, or background crawler is implemented.
 
 
 ## Job discovery extension (November 12, 2026)

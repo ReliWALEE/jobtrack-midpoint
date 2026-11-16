@@ -1,5 +1,7 @@
 # JobTrack final poster content draft
 
+**Historical draft:** The final poster is `deliverables/JobTrack-poster-final.pdf`, and its observed November 13 AWS evidence is summarized in [`FINAL_STATUS_2026-11-13.md`](FINAL_STATUS_2026-11-13.md). The planning copy below has not been updated to the deployed sandbox/SSH configuration.
+
 This is source copy for the final 42 × 56 inch PDF. Do not submit this Markdown file. Replace every evidence marker with observed data before export. The final poster must not claim AWS deployment until verified.
 
 ## Title and team

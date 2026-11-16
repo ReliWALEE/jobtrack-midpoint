@@ -97,10 +97,10 @@ def summary_panel(canvas, top, evidence):
     x = MARGIN + 2 * (COL + GAP)
     paragraphs = [
         "JobTrack keeps a student's job applications in one searchable pipeline. It stores company, role, location, annual salary, status, date, link, and notes.",
-        "The browser dashboard uses a Python JSON API and SQLite. A Chrome extension opens a reviewable draft from supported structured job postings.",
+        "The dashboard, Python API, and SQLite support tracking and job discovery. Remotive works without a key; Indeed and LinkedIn use optional JSearch. A Chrome extension reads structured postings.",
     ]
     if evidence.get("aws_verified"):
-        paragraphs.append("Verified private AWS deployment: EC2, encrypted EBS, S3 source delivery, IAM, Systems Manager, and CloudFormation.")
+        paragraphs.append("Verified public HTTPS AWS sandbox demo: Nginx with a shared password proxies to EC2's loopback app. CloudFormation provisions EC2 and encrypted EBS; private S3 supplies source.")
     else:
         paragraphs.append("AWS deployment is still pending verification in this draft. Final output must state actual cloud results.")
     return panel(canvas, x, top, COL, "Project summary", paragraphs, min_height=1130, fill=PALE)
@@ -167,9 +167,9 @@ def metrics_panel(canvas, x, top, evidence, metrics):
     if is_aws:
         region = evidence.get("region", "region not recorded")
         machine = evidence.get("instance_type", "instance type not recorded")
-        location = f"{machine}, {region}; includes the client-to-EC2 SSM tunnel."
+        location = f"{machine}, {region}; includes the client-to-EC2 SSH tunnel."
     else:
-        location = "localhost only; excludes AWS and the SSM tunnel. Cloud measurement pending."
+        location = "localhost only; excludes AWS and the SSH tunnel. Cloud measurement pending."
     caption = (f"{metrics['requests_per_endpoint']} sequential GET requests per endpoint after "
                f"{metrics['warmup_per_endpoint']} warmups; {metrics['database_records']} fictional records. "
                f"{location} Small single-user sample.")
@@ -192,7 +192,7 @@ def build(output, evidence, metrics):
     c.drawString(MARGIN, PAGE_H - 161, "JobTrack")
     c.setFont("Arial", 43)
     c.drawString(MARGIN, PAGE_H - 230,
-                 "A private cloud-hosted job application tracker" if evidence.get("aws_verified")
+                 "A cloud-hosted job application tracker" if evidence.get("aws_verified")
                  else "A private job application tracker · AWS deployment planned")
     c.setFont("Arial", 29)
     c.drawString(MARGIN, PAGE_H - 298, "CSE 4333 Cloud Computing · Group 42")
@@ -210,46 +210,46 @@ def build(output, evidence, metrics):
         "JobTrack keeps opportunities, status changes, salary, and notes together so a user can see their pipeline and act on it.",
     ]) - 28
     y1 = panel(c, x1, y1, COL, "User workflow", [
-        "Add or import a posting draft; review its fields; save; update status; search and filter; delete old entries.",
-        "The extension reads Schema.org JobPosting JSON-LD after a click. It does not submit employer applications or support every job board.",
+        "Find a listing or import a posting draft; review fields; save; update status; search and filter; delete old entries.",
+        "Remotive and optional JSearch provide job discovery. The extension reads Schema.org JobPosting JSON-LD. JobTrack does not apply to employers.",
     ]) - 28
     y1 = panel(c, x1, y1, COL, "Conclusion", [
-        "JobTrack puts job opportunities and their progress in one searchable place. The final result is a working private demonstration with clear limits.",
-        "The cloud status and measured performance shown here must match the final deployed evidence.",
+        "JobTrack puts discovered opportunities and application progress in one searchable place. It is a working password-protected class demonstration.",
+        "AWS deployment and performance use measured results. Per-user accounts and durable public hosting remain future work." if evidence.get("aws_verified") else "Cloud deployment and measurement remain unverified; the local demonstration is functional.",
     ])
 
     y2 = panel(c, x2, lower_top, COL, "Application logic", [
         "The responsive dashboard calls same-origin JSON endpoints. The Python API validates fields and stores UTC timestamps in SQLite.",
-        "Endpoints: GET /api/health; GET/POST /api/applications; PUT/DELETE /api/applications/{id}. Search and filters are combined; sort keys are allowlisted.",
+        "Endpoints cover health, application CRUD, /api/jobs discovery, /api/job-sources status, and saving a listing. Search and filters combine; sort keys are allowlisted.",
     ]) - 28
-    cloud_intro = ("CloudFormation provisions EC2, an encrypted EBS root volume, and a no-ingress security group. Learner Lab's existing instance profile lets EC2 pull its source ZIP from private S3 and use Systems Manager."
+    cloud_intro = ("CloudFormation creates EC2, encrypted EBS, and public web rules. SSH is /32-limited; myS3Role reads the private S3 source ZIP."
                    if evidence.get("aws_verified") else
-                   "Planned cloud design: CloudFormation would provision EC2, encrypted EBS, and a no-ingress security group, attaching Learner Lab's existing instance profile for S3 and Systems Manager.")
+                   "Planned cloud design: CloudFormation would provision EC2, encrypted EBS, and SSH restricted to one /32, using the sandbox's myS3Role profile for private S3.")
     y2 = panel(c, x2, y2, COL, "Cloud services", [
         cloud_intro,
-        "Systems Manager port forwarding would let an authorized user reach the loopback-only app without opening a public web port." if not evidence.get("aws_verified") else "Systems Manager port forwarding lets an authorized user reach the loopback-only app without opening a public web port.",
+        "An SSH tunnel would let an authorized user reach the loopback-only app without opening a public web port." if not evidence.get("aws_verified") else "Nginx serves HTTPS with a shared demo password, then proxies to the loopback Python app.",
     ]) - 28
     y2 = panel(c, x2, y2, COL, "Alternatives considered", [
-        "A public HTTPS app needs login and per-user authorization. RDS or DynamoDB would improve managed storage; serverless hosting could scale differently.",
-        "The one-instance SQLite design is appropriate for a small private class demo, but it has no high availability or automatic backup.",
+        "Per-user accounts would isolate applicants. RDS or DynamoDB would improve managed storage; serverless hosting could scale differently.",
+        "The one-instance SQLite design is appropriate for a small class demo, but it has no high availability or automatic backup.",
     ]) - 28
     y2 = panel(c, x2, y2, COL, "Challenges and lessons", [
         "Browser QA exposed a Reset-button conflict. Final API review exposed unclosed SQLite connections. Both were fixed and regression-tested.",
-        "The planned SSM tunnel would keep the cloud service private. A single EBS root volume would need backup before termination." if not evidence.get("aws_verified") else "SSM keeps the service private but adds a tunnel to the demo workflow. A single EBS root volume needs backup before termination.",
+        "Public access required TLS and a password at the reverse proxy. The sandbox session is time-limited; the EBS root volume needs backup before termination.",
     ]) - 28
     roles = evidence.get("roles") or "Team roles await confirmation. The proposal credits NoorAldeen with the idea and Ahmad with proposal review; final work should be described accurately."
     y2 = panel(c, x2, y2, COL, "Team contributions", [roles])
 
     y3 = metrics_panel(c, x3, lower_top, evidence, metrics) - 28
     y3 = panel(c, x3, y3, COL, "Verification", [
-        "11 API/database tests and 5 extractor tests pass. The built-in browser checked draft review, save, edit, refresh, filters, sorting, and deletion.",
-        "Cloud and installed-extension results are reported only after end-to-end verification.",
+        "23 Python tests and 5 extractor tests pass. The browser checked draft review, save, edit, refresh, filters, sorting, deletion, and job discovery.",
+        "Cloud CRUD, restart persistence, and Remotive discovery passed. Public HTTPS returned 401 without a password and 200 with one. The installed extension toolbar was not tested.",
     ]) - 28
     y3 = panel(c, x3, y3, COL, "Machine learning", [
         "Not applicable. JobTrack uses rules and a relational database; it has no trained model.",
     ]) - 28
     y3 = panel(c, x3, y3, COL, "Future work", [
-        "Add authentication and user isolation before public access. Move to managed backup/database, add HTTPS and monitoring, and broaden posting extraction.",
+        "Add individual accounts and user isolation before real applicant data. Move to managed backup/database, add monitoring, and broaden posting extraction.",
     ])
 
     footer_y = 88
