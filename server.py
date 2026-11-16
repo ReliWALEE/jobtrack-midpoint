@@ -5,6 +5,7 @@ from datetime import date, datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit, parse_qs
+import jobs
 from jobs import JobDiscovery, ProviderError
 
 ROOT = Path(__file__).resolve().parent
@@ -148,8 +149,36 @@ class Handler(SimpleHTTPRequestHandler):
 def create_server(host='127.0.0.1',port=8000,db_path=None):
     db_path=str(db_path or os.environ.get('JOBTRACK_DB',ROOT/'data/jobtrack.sqlite3')); initialize(db_path)
     server=ThreadingHTTPServer((host,port),Handler); server.db_path=db_path; server.jobs=JobDiscovery(db_path); return server
+
+def rotate_account_background(server):
+    """Create this run's free-credit account off the request path.
+
+    Runs after listening starts so a slow mailbox signup never delays the
+    dashboard. Automatic mode uses only the account issued for this run.
+    """
+    jobs.begin_run_account()
+    def worker():
+        def announce(*parts):
+            print('JobTrack:', *parts, flush=True)
+        try:
+            import account_factory
+            key = account_factory.acquire_run_key(log=announce, persist_path=server.db_path)
+            if not isinstance(key, str) or not key.strip():
+                raise ValueError('Account setup returned an empty key')
+            jobs.set_runtime_key(key)
+            print('JobTrack: rotated OpenWeb Ninja account for this run (fresh free credits active).', flush=True)
+        except Exception as exc:
+            jobs.fail_run_account()
+            print(f'JobTrack: fresh-account setup failed ({type(exc).__name__}: {exc}). Restart to try again; Remotive and the tracker remain available.', flush=True)
+    thread = threading.Thread(target=worker, name='account-factory', daemon=True)
+    thread.start()
+    return thread
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser(); parser.add_argument('--host',default='127.0.0.1'); parser.add_argument('--port',type=int,default=8000); args=parser.parse_args()
     server=create_server(args.host,args.port); print(f'JobTrack: http://{args.host}:{server.server_port}',flush=True)
+    auto_account=os.environ.get('JOBTRACK_AUTO_ACCOUNT') or jobs.env_file_setting('JOBTRACK_AUTO_ACCOUNT') or '1'
+    if auto_account.strip().lower() not in ('0','false','no'):
+        rotate_account_background(server)
     try: server.serve_forever()
     except KeyboardInterrupt: server.server_close()

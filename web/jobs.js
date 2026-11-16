@@ -1,5 +1,6 @@
 const $ = s => document.querySelector(s);
 let sequence = 0, ready = false;
+let accountSetup = {mode: 'manual', status: 'manual'};
 const prefsKey = 'jobtrack.discovery.v1';
 function text(tag, value, className) {
   const node = document.createElement(tag); node.textContent = value;
@@ -13,7 +14,14 @@ function prefs() {
 function remember() { try { localStorage.setItem(prefsKey, JSON.stringify(prefs())); } catch {} }
 function connection() {
   const needsKey = $('#job-source').value !== 'remotive' && !ready;
-  $('#connect-source').hidden = !needsKey;
+  const automatic = accountSetup.mode === 'automatic';
+  $('#connect-source').hidden = !needsKey || automatic;
+  $('#account-setup').hidden = !automatic;
+  $('#account-setup').textContent = automatic ? ({
+    pending: 'Creating a fresh account for this run. Job searches will connect automatically when ready.',
+    ready: 'Job sources connected with a fresh account for this run.',
+    failed: 'Could not create a fresh account for this run. Check the server logs and restart to try again. Remotive is still available.'
+  }[accountSetup.status] || '') : '';
   $('#source-help').textContent = $('#job-source').value === 'remotive'
     ? 'Remotive remote jobs · No account needed. Location filters the employer’s eligibility text; “Worldwide” roles may also be relevant.'
     : 'JSearch searches public listings across job boards. Results keep the publisher name and original posting link.';
@@ -27,10 +35,20 @@ async function request(path, options) {
 }
 async function search() {
   remember(); const version = ++sequence;
+  try { await refreshSources(); }
+  catch (error) {
+    if (version === sequence) {
+      $('#jobs-message').textContent = 'Could not check job sources: ' + error.message;
+      $('#find-jobs').disabled = false; $('#find-jobs').textContent = 'Find jobs';
+    }
+    return;
+  }
+  if (version !== sequence) return;
   if (connection()) {
     $('#job-list').replaceChildren(); $('#jobs-empty').hidden = true;
     $('#find-jobs').disabled = false; $('#find-jobs').textContent = 'Find jobs';
-    $('#result-count').textContent = 'Connect this source to search';
+    $('#result-count').textContent = accountSetup.status === 'pending' ? 'Connecting job source…'
+      : accountSetup.status === 'failed' ? 'Job source unavailable' : 'Connect this source to search';
     $('#jobs-message').textContent = ''; $('#freshness').textContent = '';
     return;
   }
@@ -85,6 +103,11 @@ $('#job-search').onsubmit = event => { event.preventDefault(); search(); };
 $('#job-source').onchange = () => { connection(); search(); };
 $('#auto-refresh').onchange = remember;
 $('#setup-help').onclick = () => { $('#setup-instructions').hidden = !$('#setup-instructions').hidden; };
+async function refreshSources() {
+  const data = await request('job-sources');
+  ready = data.jsearch_ready;
+  accountSetup = data.account_setup || {mode: 'manual', status: 'manual'};
+}
 async function init() {
   try {
     const saved = JSON.parse(localStorage.getItem(prefsKey) || 'null');
@@ -95,9 +118,17 @@ async function init() {
       $('#auto-refresh').checked = saved.auto === true;
     }
   } catch {}
-  try { ready = (await request('job-sources')).jsearch_ready; }
-  catch (error) { $('#jobs-message').textContent = error.message; return; }
   search();
 }
+setInterval(async () => {
+  if (accountSetup.status !== 'pending' || document.hidden) return;
+  try {
+    await refreshSources();
+    if (accountSetup.status !== 'pending') {
+      connection();
+      if ($('#job-source').value !== 'remotive') search();
+    }
+  } catch (error) { $('#jobs-message').textContent = 'Could not check account setup: ' + error.message; }
+}, 5000);
 setInterval(() => { if ($('#auto-refresh').checked && !document.hidden && !$('#find-jobs').disabled) search(); }, 30 * 60 * 1000);
 init();

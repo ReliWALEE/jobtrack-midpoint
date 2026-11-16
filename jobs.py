@@ -15,18 +15,56 @@ from urllib.request import Request, urlopen
 
 KEY_PATH = Path(__file__).resolve().with_name('.env')
 
-def configured_key():
-    """Read only this setting; never execute or export dotenv file contents."""
-    if 'JSEARCH_API_KEY' in os.environ:
-        return os.environ['JSEARCH_API_KEY'].strip()
+# A per-run rotated OpenWeb Ninja account installs its fresh key here; it wins
+# over the environment/.env key so every process runs on its own free credits.
+_RUNTIME_KEY_LOCK = threading.Lock()
+_RUNTIME_KEY = ''
+_RUN_ACCOUNT_STATE = 'manual'
+
+def begin_run_account():
+    """Require a newly issued account key for this automatic server run."""
+    global _RUNTIME_KEY, _RUN_ACCOUNT_STATE
+    with _RUNTIME_KEY_LOCK:
+        _RUNTIME_KEY = ''
+        _RUN_ACCOUNT_STATE = 'pending'
+
+def fail_run_account():
+    global _RUNTIME_KEY, _RUN_ACCOUNT_STATE
+    with _RUNTIME_KEY_LOCK:
+        _RUNTIME_KEY = ''
+        _RUN_ACCOUNT_STATE = 'failed'
+
+def set_runtime_key(value):
+    """Install this process's rotating-account key ahead of env/.env."""
+    global _RUNTIME_KEY, _RUN_ACCOUNT_STATE
+    with _RUNTIME_KEY_LOCK:
+        _RUNTIME_KEY = str(value or '').strip()
+        if _RUN_ACCOUNT_STATE != 'manual':
+            _RUN_ACCOUNT_STATE = 'ready' if _RUNTIME_KEY else 'failed'
+
+def runtime_key():
+    with _RUNTIME_KEY_LOCK:
+        return _RUNTIME_KEY
+
+def env_file_setting(name):
+    """Read one simple NAME=value line from the local .env; never executes it."""
     try:
         for line in KEY_PATH.read_text(encoding='utf-8').splitlines():
-            name, separator, value = line.partition('=')
-            if separator and name.strip() == 'JSEARCH_API_KEY':
+            key_name, separator, value = line.partition('=')
+            if separator and key_name.strip() == name:
                 return value.strip().strip('\"\'')
     except (OSError, UnicodeError):
         pass
-    return ''
+    return None
+
+def configured_key():
+    with _RUNTIME_KEY_LOCK:
+        key, state = _RUNTIME_KEY, _RUN_ACCOUNT_STATE
+    if key or state != 'manual':
+        return key
+    if 'JSEARCH_API_KEY' in os.environ:
+        return os.environ['JSEARCH_API_KEY'].strip()
+    return env_file_setting('JSEARCH_API_KEY') or ''
 
 REMOTIVE_URL = 'https://remotive.com/api/remote-jobs'
 JSEARCH_URL = 'https://api.openwebninja.com/jsearch/search-v2'
@@ -105,13 +143,17 @@ class JobDiscovery:
             ''')
 
     def sources(self):
-        configured = bool(configured_key())
+        with _RUNTIME_KEY_LOCK:
+            state, key = _RUN_ACCOUNT_STATE, _RUNTIME_KEY
+        configured = bool(configured_key() if state == 'manual' else key)
         return {'sources': [
             {'id': 'remotive', 'name': 'Remotive · remote jobs', 'ready': True},
             {'id': 'jsearch', 'name': 'All boards · JSearch', 'ready': configured},
             {'id': 'indeed', 'name': 'Indeed · via JSearch', 'ready': configured},
             {'id': 'linkedin', 'name': 'LinkedIn · via JSearch', 'ready': configured}],
-            'jsearch_ready': configured}
+            'jsearch_ready': configured,
+            'account_setup': {'mode': 'manual' if state == 'manual' else 'automatic',
+                              'status': state}}
 
     def fetch(self, url, key=None):
         headers = {'Accept': 'application/json', 'User-Agent': 'JobTrack/1.1 (personal job discovery)'}
@@ -140,6 +182,12 @@ class JobDiscovery:
         query, location = query.strip(), location.strip()
         key = configured_key()
         if provider != 'remotive' and not key:
+            with _RUNTIME_KEY_LOCK:
+                state = _RUN_ACCOUNT_STATE
+            if state == 'pending':
+                raise ProviderError('Creating a fresh account for this run. Job searches will connect when setup finishes.')
+            if state == 'failed':
+                raise ProviderError('Could not create a fresh account for this run. Check the server logs and restart to try again.')
             raise ProviderError('Connect a JSearch API key to search Indeed, LinkedIn, and other boards. Remotive remote jobs work without an account.')
         if provider != 'remotive' and not query:
             raise ValueError('Enter a job title or keyword')
