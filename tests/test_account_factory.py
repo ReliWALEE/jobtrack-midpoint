@@ -107,7 +107,7 @@ def fake_mailtm_factory(polls_before_message=1):
 
 
 def fake_key_endpoint(body=API_KEY_BODY):
-    """Stands in for urllib's urlopen on the gateway get-or-create call."""
+    """Stands in for the gateway key exchange and free-tier subscription."""
     class Reply:
         status = 200
         def read(self, n=-1):
@@ -118,6 +118,12 @@ def fake_key_endpoint(body=API_KEY_BODY):
             return False
 
     def urlopen(req, timeout=0):
+        if req.full_url == account_factory.SUBSCRIBE_FREE_URL:
+            self_body = json.loads(req.data.decode())
+            assert self_body == {'api_id': 'jsearch', 'plan_key': 'basic'}
+            assert req.get_header('X-api-key') == 'KEYFRESH-test-42'
+            return Reply()
+        assert req.full_url == account_factory.API_KEY_URL
         return Reply()
     return urlopen
 
@@ -254,6 +260,11 @@ class RotationFailurePathTests(unittest.TestCase):
 @patch('account_factory.time.sleep', lambda *_: None)
 class MailboxCreationTests(unittest.TestCase):
 
+    def test_generated_mailbox_name_is_accepted_length(self):
+        address, _password = account_factory._fresh_identity('example.test')
+        self.assertEqual(len(address.split('@')[0]), 10)
+        self.assertTrue(address.startswith('jt'))
+
     @staticmethod
     def scripted_urlopen(accounts_outcomes):
         """Serve /domains and /token; replay `accounts_outcomes` on POST /accounts."""
@@ -303,6 +314,20 @@ class MailboxCreationTests(unittest.TestCase):
             create_mailbox()
         self.assertIn('could not register a free mailbox', str(ctx.exception))
         self.assertEqual(len(state['accounts_seen']), 5)   # bounded attempts
+
+
+class RateLimitTests(unittest.TestCase):
+    def test_creation_budget_survives_separate_calls(self):
+        now = [1000.0]
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / 'jobtrack.sqlite3'
+            with patch('account_factory.time.time', lambda: now[0]), \
+                 patch('account_factory.time.sleep', lambda delay: now.__setitem__(0, now[0] + delay)):
+                for _ in range(9):
+                    account_factory.wait_for_mailbox_slot(db_path)
+                self.assertEqual(now[0], 1000.0)
+                account_factory.wait_for_mailbox_slot(db_path)
+                self.assertGreaterEqual(now[0], 1060.0)
 
 
 class ParserAndKeyPrecedenceTests(unittest.TestCase):
