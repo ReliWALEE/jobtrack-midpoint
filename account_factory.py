@@ -21,11 +21,13 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from contextlib import closing
 
 APP_BASE = 'https://app.openwebninja.com'
 LOGIN_BASE = 'https://login.openwebninja.com'
 GATEWAY_BASE = 'https://rpuo5v9cbe.execute-api.us-east-1.amazonaws.com/v1'
 API_KEY_URL = GATEWAY_BASE + '/get-or-create-api-key'
+SUBSCRIBE_FREE_URL = GATEWAY_BASE + '/self-subscribe-free'
 TOKEN_URL = APP_BASE + '/api/auth/token'
 MAILTM_BASE = 'https://api.mail.tm'
 USER_AGENT = 'JobTrack/1.2 (single-user job tracker; rotates its own free-tier account)'
@@ -154,12 +156,14 @@ def _mailtm(token, path, payload=None, log=None):
 _MAILBOX_ATTEMPTS = 12
 _MAILBOX_PAUSE_S = 450
 _MAILBOX_PAUSE_FACTOR_S = 30
+_MAX_MAILBOX_ATTEMPTS_PER_MINUTE = 9
 
 _ALPHABET = string.ascii_lowercase + string.digits
 
 
 def _fresh_identity(domain):
-    user = 'jobtrack' + ''.join(secrets.choice(_ALPHABET) for _ in range(8))
+    # mail.tm rejects the previous 16-character local part as an invalid username.
+    user = 'jt' + ''.join(secrets.choice(_ALPHABET) for _ in range(8))
     password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(16))
     return f'{user}@{domain}', password
 
@@ -176,7 +180,26 @@ def _members(payload):
     raise AccountError('unexpected mail.tm payload shape')
 
 
-def create_mailbox(log=lambda *_: None):
+def wait_for_mailbox_slot(db_path, log=lambda *_: None):
+    """Persist a conservative account-creation cap across service restarts."""
+    if not db_path:
+        return
+    while True:
+        now = time.time()
+        with closing(sqlite3.connect(str(db_path), timeout=10)) as db, db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('CREATE TABLE IF NOT EXISTS mailbox_attempts (attempted_at REAL NOT NULL)')
+            db.execute('DELETE FROM mailbox_attempts WHERE attempted_at <= ?', (now - 60,))
+            rows = db.execute('SELECT attempted_at FROM mailbox_attempts ORDER BY attempted_at').fetchall()
+            if len(rows) < _MAX_MAILBOX_ATTEMPTS_PER_MINUTE:
+                db.execute('INSERT INTO mailbox_attempts VALUES (?)', (now,))
+                return
+            delay = max(1, rows[0][0] + 60 - now)
+        log(f'mailbox creation limit reached; waiting {delay:.0f}s')
+        time.sleep(delay)
+
+
+def create_mailbox(log=lambda *_: None, persist_path=None):
     """Register a disposable mailbox; returns (address, password, bearer token).
 
     mail.tm intermittently rejects requests (rate limits, some username
@@ -191,6 +214,7 @@ def create_mailbox(log=lambda *_: None):
             time.sleep(min(_MAILBOX_PAUSE_S, _MAILBOX_PAUSE_FACTOR_S * attempt))
         address, password = _fresh_identity(domain)
         try:
+            wait_for_mailbox_slot(persist_path, log=log)
             _mailtm(None, '/accounts', payload={'address': address, 'password': password}, log=log)
             token = _mailtm(None, '/token', payload={'address': address, 'password': password})['token']
             return address, password, token
@@ -325,6 +349,30 @@ def exchange_api_key(access_token):
     return key
 
 
+def subscribe_jsearch_free(api_key):
+    """Activate JSearch's free tier with OpenWeb Ninja's official MCP endpoint."""
+    req = urllib.request.Request(SUBSCRIBE_FREE_URL,
+        data=json.dumps({'api_id': 'jsearch', 'plan_key': 'basic'}).encode(),
+        method='POST',
+        headers={'Content-Type': 'application/json', 'Accept': 'application/json',
+                 'x-api-key': api_key, 'User-Agent': 'openwebninja-mcp'})
+    try:
+        with urllib.request.urlopen(req, timeout=25) as reply:
+            if reply.status < 200 or reply.status >= 300:
+                raise AccountError(f'JSearch free-tier subscription returned HTTP {reply.status}')
+            reply.read(100_000)
+    except urllib.error.HTTPError as exc:
+        try:
+            detail = exc.read(300).decode('utf-8', 'replace')
+        except Exception:
+            detail = ''
+        finally:
+            exc.close()
+        raise AccountError(f'JSearch free-tier subscription refused: HTTP {exc.code} {detail[:120]}') from None
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise AccountError(f'JSearch free-tier subscription unreachable: {exc}') from None
+
+
 _KEY_RETENTION_ROWS = 20
 
 
@@ -358,7 +406,7 @@ def last_saved_key(db_path):
 def acquire_run_key(log=lambda *_: None, persist_path=None):
     """Rotate: mailbox -> signup -> email confirmation -> login -> API key."""
     browser = Session()
-    address, password, mailbox_token = create_mailbox(log=log)
+    address, password, mailbox_token = create_mailbox(log=log, persist_path=persist_path)
     log(f'created disposable mailbox {address}')
     signup_openwebninja(browser, address, password)
     link = poll_verification_link(mailbox_token, attempts=24, pause_s=5)
@@ -371,4 +419,5 @@ def acquire_run_key(log=lambda *_: None, persist_path=None):
     api_key = exchange_api_key(access)
     if persist_path:
         remember_account(persist_path, address, api_key)
+    subscribe_jsearch_free(api_key)
     return api_key
